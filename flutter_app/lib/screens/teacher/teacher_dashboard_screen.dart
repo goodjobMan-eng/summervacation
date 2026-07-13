@@ -26,6 +26,39 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   int _tab = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _ensureSeedData();
+  }
+
+  /// 문제 은행이 비어 있으면(첫 사용) 수학 28일×10문제와
+  /// 글쓰기 30일 주제를 자동으로 업로드한다 — 버튼을 누를 필요 없음.
+  Future<void> _ensureSeedData() async {
+    final db = FirebaseFirestore.instance;
+    final probe = await db.doc('mathBank/day01').get();
+    if (probe.exists) return;
+
+    final batch = db.batch();
+    for (final day in kMathCurriculumSeed) {
+      final dayId = 'day${day['day'].toString().padLeft(2, '0')}';
+      batch.set(db.doc('mathBank/$dayId'), day, SetOptions(merge: true));
+    }
+    for (final topic in kWritingTopicsSeed) {
+      final dayId = 'day${topic['day'].toString().padLeft(2, '0')}';
+      batch.set(
+          db.doc('writingTopics/$dayId'), topic, SetOptions(merge: true));
+    }
+    await batch.commit();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('📚 기본 문제 은행(수학 280문제 + 글쓰기 30주제)을 준비했어요!')),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
