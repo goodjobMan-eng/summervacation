@@ -31,8 +31,14 @@ firestore-root
 │
 ├── joinCodes/{code}                     # 학급 참여 코드 → 학급 매핑
 │     classId: string
+│     password: string                   # ★ 4자리 입장 비밀번호 (서버만 접근)
 │     grade: 6
 │     isActive: bool
+│
+├── regionStats/{dateKey}                # ★ 지역별 비식별 통계 (admin만 열람)
+│     regions: {                         #   매일 밤 Cloud Function이 집계
+│       "서울": { students, exercised,   #   개인 식별 정보 없음
+│                checkedIn, positive, neutral, negative }, ... }
 │
 ├── mathBank/{dayId}                     # ★ 동학년 공유: 수학 28일 × 10문제
 │     day: 1..28                         #   단원별 3일(3세트) × 6단원 + 복습 10일
@@ -54,12 +60,16 @@ firestore-root
 │     guide: string                      # 글쓰기 안내문
 │
 └── classes/{classId}                    # ★ 학급별 독립 데이터의 루트
-      name: "6학년 1반"
+      name: "마지초등학교 6학년 1반"
+      school: string
+      region: string                     # 17개 시·도 (지역별 통계의 기준)
       grade: 6
-      teacherId: uid
+      teacherId: uid                     # 개설한 담임만 학생 데이터 접근 가능
       joinCode: string
       isActive: bool                     # 스케줄러 순회 대상 여부
       missionStartDate: "2026-07-20"     # 방학 미션 1일차 기준일
+      │
+      ├── private/credentials            # 교사 전용: 코드/비밀번호 재확인용
       │
       ├── selfCheckTemplates/{dateKey}   # 교사가 부여한 당일 자기 점검 항목
       │     items: [ { id, label } ]     #   예: 알림장 확인, 준비물, 독서 30분

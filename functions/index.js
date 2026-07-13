@@ -142,13 +142,93 @@ async function findMissingMissions(studentRef, dateKey, mathDayId, writingDayId)
 }
 
 // =====================================================================
-// 2) 학급 가입 callable — 참여 코드 검증 후 학생을 자기 반에 등록
+// 2-a) 학급 개설 callable — 교사가 지역을 골라 학급을 만들면
+//      참여 코드(6자리)와 비밀번호(4자리 숫자)를 발급한다.
+// =====================================================================
+const REGIONS = [
+  "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
+  "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
+];
+
+exports.createClass = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  const { region, school, className, teacherName, missionStartDate } =
+    request.data ?? {};
+  if (!REGIONS.includes(region)) {
+    throw new HttpsError("invalid-argument", "지역을 선택해 주세요.");
+  }
+  for (const [field, v] of [["학교 이름", school], ["학급 이름", className], ["선생님 이름", teacherName]]) {
+    if (typeof v !== "string" || !v.trim()) {
+      throw new HttpsError("invalid-argument", `${field}을(를) 입력해 주세요.`);
+    }
+  }
+  if (typeof missionStartDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(missionStartDate)) {
+    throw new HttpsError("invalid-argument", "방학 시작일 형식이 올바르지 않습니다. (예: 2026-07-20)");
+  }
+
+  const userSnap = await db.collection("users").doc(uid).get();
+  if (userSnap.exists && userSnap.data().classId) {
+    throw new HttpsError("already-exists", "이미 개설했거나 소속된 학급이 있습니다.");
+  }
+
+  // 겹치지 않는 참여 코드 생성 (헷갈리는 문자 제외한 6자리)
+  const CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let joinCode;
+  for (let i = 0; i < 10; i++) {
+    joinCode = Array.from({ length: 6 },
+      () => CHARS[crypto.randomInt(CHARS.length)]).join("");
+    if (!(await db.collection("joinCodes").doc(joinCode).get()).exists) break;
+    joinCode = null;
+  }
+  if (!joinCode) throw new HttpsError("internal", "코드 생성에 실패했습니다. 다시 시도해 주세요.");
+  const password = String(crypto.randomInt(10000)).padStart(4, "0");
+
+  const classRef = db.collection("classes").doc();
+  const batch = db.batch();
+  batch.set(db.collection("users").doc(uid), {
+    role: "teacher",
+    name: teacherName.trim(),
+    classId: classRef.id,
+    approved: true,
+  }, { merge: true });
+  batch.set(classRef, {
+    name: `${school.trim()} ${className.trim()}`,
+    school: school.trim(),
+    region,
+    grade: 6,
+    teacherId: uid,
+    joinCode,
+    isActive: true,
+    missionStartDate,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  batch.set(db.collection("joinCodes").doc(joinCode), {
+    classId: classRef.id,
+    password, // joinCodes는 Rules에서 클라이언트 접근 전면 차단 — 서버만 검증
+    grade: 6,
+    isActive: true,
+  });
+  // 담임이 대시보드에서 코드/비밀번호를 다시 확인할 수 있도록
+  // 교사 전용(private) 문서에도 보관 (학생은 Rules로 읽기 차단)
+  batch.set(classRef.collection("private").doc("credentials"), {
+    joinCode,
+    password,
+  });
+  await batch.commit();
+
+  return { classId: classRef.id, joinCode, password };
+});
+
+// =====================================================================
+// 2-b) 학급 가입 callable — 참여 코드 + 비밀번호 검증 후 학생 등록
 // =====================================================================
 exports.joinClass = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { code, name } = request.data ?? {};
+  const { code, password, name } = request.data ?? {};
   if (typeof code !== "string" || !code.trim() || typeof name !== "string" || !name.trim()) {
     throw new HttpsError("invalid-argument", "참여 코드와 이름을 입력해 주세요.");
   }
@@ -156,6 +236,9 @@ exports.joinClass = onCall(async (request) => {
   const codeSnap = await db.collection("joinCodes").doc(code.trim().toUpperCase()).get();
   if (!codeSnap.exists || codeSnap.data().isActive !== true) {
     throw new HttpsError("not-found", "유효하지 않은 학급 참여 코드입니다.");
+  }
+  if (String(password ?? "") !== String(codeSnap.data().password ?? "")) {
+    throw new HttpsError("permission-denied", "비밀번호가 맞지 않아요. 선생님께 다시 확인해 보세요.");
   }
   const { classId } = codeSnap.data();
 
@@ -363,5 +446,68 @@ exports.onEmotionCheckIn = onDocumentWritten(
     console.log(
       `[onEmotionCheckIn] ${classId}/${studentName}: 감정 경고 생성 (${trigger})`
     );
+  }
+);
+
+// =====================================================================
+// 6) 지역별 비식별 통계 집계 — 매일 21:30 KST
+//
+//    이름·UID 등 개인 식별 정보 없이, 지역 단위로만 집계한다:
+//      - 운동: 오늘 운동을 기록한 학생 비율
+//      - 정서: 오늘 감정 체크인의 긍정/보통/부정 분포
+//    결과는 regionStats/{dateKey} 문서에 저장되며,
+//    Rules상 role == 'admin' 사용자만 읽을 수 있다.
+// =====================================================================
+exports.aggregateRegionStats = onSchedule(
+  { schedule: "30 21 * * *", timeZone: "Asia/Seoul" },
+  async () => {
+    const dateKey = todayKeyKST();
+    const classesSnap = await db
+      .collection("classes")
+      .where("isActive", "==", true)
+      .get();
+
+    // region → { students, exercised, checkedIn, positive, neutral, negative }
+    const regions = {};
+
+    for (const classDoc of classesSnap.docs) {
+      const region = classDoc.data().region ?? "미지정";
+      const r = (regions[region] ??= {
+        students: 0, exercised: 0, checkedIn: 0,
+        positive: 0, neutral: 0, negative: 0,
+      });
+
+      const studentsSnap = await classDoc.ref
+        .collection("students")
+        .where("approved", "==", true)
+        .get();
+      r.students += studentsSnap.size;
+
+      await Promise.all(
+        studentsSnap.docs.map(async (studentDoc) => {
+          const [exSnap, emoSnap] = await Promise.all([
+            studentDoc.ref.collection("exercises").doc(dateKey).get(),
+            studentDoc.ref.collection("emotions").doc(dateKey).get(),
+          ]);
+          if (exSnap.exists && (exSnap.data().entries ?? []).length > 0) {
+            r.exercised += 1;
+          }
+          if (emoSnap.exists) {
+            r.checkedIn += 1;
+            const mood = emoSnap.data().mood;
+            if (mood === "positive") r.positive += 1;
+            else if (mood === "negative") r.negative += 1;
+            else r.neutral += 1;
+          }
+        })
+      );
+    }
+
+    await db.doc(`regionStats/${dateKey}`).set({
+      date: dateKey,
+      regions,
+      generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    console.log(`[aggregateRegionStats] ${dateKey}: ${Object.keys(regions).length}개 지역 집계 완료`);
   }
 );

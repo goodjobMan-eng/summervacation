@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'models/models.dart';
 import 'theme.dart';
-import 'screens/auth/join_class_screen.dart';
+import 'screens/admin/admin_stats_screen.dart';
+import 'screens/auth/role_select_screen.dart';
 import 'screens/student/emotion_checkin_screen.dart';
 import 'screens/student/student_home_screen.dart';
 import 'screens/teacher/teacher_dashboard_screen.dart';
@@ -48,14 +49,15 @@ class AuthGate extends StatelessWidget {
           return const _Loading();
         }
         if (authSnap.data == null) {
-          return const JoinClassScreen();
+          return const RoleSelectScreen();
         }
         return StreamBuilder<AppUser>(
           stream: FirestoreService.instance.watchMe(),
           builder: (context, userSnap) {
             final user = userSnap.data;
             if (user == null) return const _Loading();
-            if (user.classId == null) return const JoinClassScreen();
+            if (user.role == 'admin') return const AdminStatsScreen();
+            if (user.classId == null) return const RoleSelectScreen();
             if (user.isTeacher) {
               return TeacherDashboardScreen(classId: user.classId!);
             }

@@ -5,6 +5,7 @@ import '../../data/math_curriculum.dart';
 import '../../data/writing_topics.dart';
 import '../../models/models.dart';
 import '../../services/firestore_service.dart';
+import 'achievement_report_screen.dart';
 
 /// 선생님용 학급 대시보드 (Teacher Portal)
 ///  - 탭 1: 본인 학급 학생들의 당일 4대 미션 현황 + 감정 상태 모니터링
@@ -25,7 +26,29 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('학급 대시보드')),
+      appBar: AppBar(
+        title: const Text('학급 대시보드'),
+        actions: [
+          IconButton(
+            tooltip: '과제 달성도 리포트 (방학 종료 후 일괄 출력)',
+            icon: const Icon(Icons.summarize_outlined),
+            onPressed: () async {
+              final cls =
+                  await FirestoreService.instance.getClass(widget.classId);
+              if (!context.mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AchievementReportScreen(
+                    classId: widget.classId,
+                    className: cls.name,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: switch (_tab) {
         0 => _DailyStatusTab(classId: widget.classId),
         1 => _ConceptStatsTab(classId: widget.classId),
@@ -115,7 +138,16 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
                         Text('${cls.name} · 미션 ${cls.currentMissionDay}일차',
                             style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 4),
-                        Text('참여 코드: ${cls.joinCode} · 학생 ${students.length}명'),
+                        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                          stream: FirebaseFirestore.instance
+                              .doc('classes/${widget.classId}/private/credentials')
+                              .snapshots(),
+                          builder: (context, credSnap) {
+                            final pw = credSnap.data?.data()?['password'];
+                            return Text(
+                                '참여 코드: ${cls.joinCode}${pw != null ? ' · 비밀번호: $pw' : ''} · 학생 ${students.length}명');
+                          },
+                        ),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,

@@ -67,6 +67,15 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ---------- 지역별 비식별 통계 ----------
+    // Cloud Function만 작성. 개인 식별 정보가 없는 지역 단위 집계이며,
+    // 앱 관리자(role == 'admin')만 열람 가능. (admin 지정은 Firestore
+    // 콘솔에서 users/{uid}.role = 'admin'으로 직접 설정)
+    match /regionStats/{dateKey} {
+      allow read: if isSignedIn() && me().role == 'admin';
+      allow write: if false;
+    }
+
     // ---------- 동학년 공유 콘텐츠 ----------
     // 수학 문제 은행: 교사 전원 읽기/쓰기, 승인된 학생은 읽기만
     match /mathBank/{dayId} {
@@ -87,6 +96,13 @@ service cloud.firestore {
       allow create: if isTeacher()
         && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isTeacherOf(classId);
+
+      // 교사 전용 비공개 문서 (참여 코드/비밀번호 보관)
+      //  학생은 읽을 수 없고, 생성은 Cloud Function만 수행
+      match /private/{docId} {
+        allow read: if isTeacherOf(classId);
+        allow write: if false;
+      }
 
       // 당일 자기 점검 항목 템플릿: 교사가 부여, 학생은 읽기만
       match /selfCheckTemplates/{dateKey} {

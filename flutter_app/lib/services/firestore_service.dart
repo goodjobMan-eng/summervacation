@@ -32,11 +32,30 @@ class FirestoreService {
   Future<SchoolClass> getClass(String classId) async =>
       SchoolClass.fromDoc(await _db.doc('classes/$classId').get());
 
-  /// 학급 참여 코드로 가입 (서버 검증 — joinClass callable)
-  Future<void> joinClassWithCode(String code, String name) async {
+  /// 학급 개설 (교사) — 서버가 참여 코드/비밀번호를 발급해 반환
+  Future<Map<String, dynamic>> createClass({
+    required String region,
+    required String school,
+    required String className,
+    required String teacherName,
+    required String missionStartDate,
+  }) async {
+    final result = await _functions.httpsCallable('createClass').call({
+      'region': region,
+      'school': school,
+      'className': className,
+      'teacherName': teacherName,
+      'missionStartDate': missionStartDate,
+    });
+    return Map<String, dynamic>.from(result.data);
+  }
+
+  /// 학급 참여 코드 + 비밀번호로 가입 (서버 검증 — joinClass callable)
+  Future<void> joinClassWithCode(
+      String code, String password, String name) async {
     await _functions
         .httpsCallable('joinClass')
-        .call({'code': code, 'name': name});
+        .call({'code': code, 'password': password, 'name': name});
   }
 
   /// 학급 내 학생 문서 스트림 (알림 목록 등)
@@ -298,6 +317,72 @@ class FirestoreService {
             (results[4].data()?['entries'] as List? ?? []).isNotEmpty,
       };
     }));
+  }
+
+  // ---------- 과제 달성도 리포트 (교사용, 방학 종료 후 일괄 출력) ----------
+  /// 학급 전체 학생의 방학 과제 달성도를 집계해 반환.
+  /// 학생별: 수학 완료 일수/평균 정답률, 글쓰기 제출 일수, 자기 점검 완료 일수,
+  ///        운동 기록 일수, 감정 체크인 일수
+  Future<List<Map<String, dynamic>>> fetchAchievementReport(
+      String classId) async {
+    final students = await _db.collection('classes/$classId/students').get();
+
+    final rows = await Future.wait(students.docs.map((s) async {
+      final base = 'classes/$classId/students/${s.id}';
+      final results = await Future.wait([
+        _db.collection('$base/mathProgress').get(),
+        _db.collection('$base/writingSubmissions').get(),
+        _db.collection('$base/selfChecks').get(),
+        _db.collection('$base/exercises').get(),
+        _db.collection('$base/emotions').get(),
+      ]);
+
+      final math = results[0].docs;
+      final mathDone =
+          math.where((d) => d.data()['isCompleted'] == true).length;
+      var scoreSum = 0.0;
+      var scored = 0;
+      for (final d in math) {
+        final total = (d.data()['total'] as num?)?.toDouble() ?? 0;
+        if (total > 0) {
+          scoreSum +=
+              ((d.data()['correctCount'] as num?)?.toDouble() ?? 0) / total;
+          scored++;
+        }
+      }
+
+      return {
+        'name': s.data()['name'] ?? s.id,
+        'mathDone': mathDone,
+        'mathAvg': scored == 0 ? null : (scoreSum / scored * 100).round(),
+        'writing': results[1]
+            .docs
+            .where((d) => d.data()['isSubmitted'] == true)
+            .length,
+        'selfCheck':
+            results[2].docs.where((d) => d.data()['allDone'] == true).length,
+        'exercise': results[3]
+            .docs
+            .where((d) => (d.data()['entries'] as List? ?? []).isNotEmpty)
+            .length,
+        'emotion': results[4].docs.length,
+      };
+    }));
+
+    rows.sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+    return rows;
+  }
+
+  // ---------- 지역별 비식별 통계 (관리자용) ----------
+  Future<List<Map<String, dynamic>>> fetchRegionStats({int days = 7}) async {
+    final snap = await _db
+        .collection('regionStats')
+        .orderBy(FieldPath.documentId, descending: true)
+        .limit(days)
+        .get();
+    return snap.docs
+        .map((d) => {'date': d.id, ...d.data()})
+        .toList();
   }
 
   // ---------- 개념 분석 (교사용) ----------
