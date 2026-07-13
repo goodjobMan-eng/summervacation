@@ -28,7 +28,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       appBar: AppBar(title: const Text('학급 대시보드')),
       body: switch (_tab) {
         0 => _DailyStatusTab(classId: widget.classId),
-        1 => const _ContentBankTab(),
+        1 => _ConceptStatsTab(classId: widget.classId),
+        2 => const _ContentBankTab(),
         _ => _SelfCheckTemplateTab(classId: widget.classId),
       },
       bottomNavigationBar: NavigationBar(
@@ -38,9 +39,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           NavigationDestination(
               icon: Icon(Icons.dashboard_outlined), label: '오늘 현황'),
           NavigationDestination(
+              icon: Icon(Icons.insights_outlined), label: '개념 분석'),
+          NavigationDestination(
               icon: Icon(Icons.library_books_outlined), label: '문제 은행'),
           NavigationDestination(
-              icon: Icon(Icons.checklist_outlined), label: '자기 점검 부여'),
+              icon: Icon(Icons.checklist_outlined), label: '자기 점검'),
         ],
       ),
     );
@@ -256,6 +259,7 @@ class _StudentStatusRow extends StatelessWidget {
       if (status['writing'] != true) '글쓰기',
       if (status['selfCheck'] != true) '자기 점검',
       if (status['emotionEmoji'] == null) '감정 체크인',
+      if (status['exercise'] != true) '운동',
     ];
     if (missing.isEmpty) return;
     await FirestoreService.instance.sendReminderToStudent(
@@ -281,6 +285,7 @@ class _StudentStatusRow extends StatelessWidget {
         final allDone = status['math'] == true &&
             status['writing'] == true &&
             status['selfCheck'] == true &&
+            status['exercise'] == true &&
             status['emotionEmoji'] != null;
 
         return Card(
@@ -297,6 +302,7 @@ class _StudentStatusRow extends StatelessWidget {
                 _MissionDot(label: '수학', done: status['math'] == true),
                 _MissionDot(label: '글', done: status['writing'] == true),
                 _MissionDot(label: '점검', done: status['selfCheck'] == true),
+                _MissionDot(label: '운동', done: status['exercise'] == true),
                 const SizedBox(width: 4),
                 IconButton(
                   tooltip: allDone ? '모든 미션 완료!' : '이 학생에게 알림 보내기',
@@ -343,7 +349,119 @@ class _MissionDot extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------
-// 탭 2: 동학년 공동 문제 은행 관리
+// 탭 2: 개념 분석 — 학급 전체의 수학 오답 태그를 집계해 취약 개념 표시
+//  문제마다 붙은 개념 태그(tag)를 기준으로, 어떤 개념에서 오답이 많이
+//  나오는지 순위·오답 수·해당 학생을 한눈에 보여준다.
+// ---------------------------------------------------------------------
+class _ConceptStatsTab extends StatefulWidget {
+  final String classId;
+  const _ConceptStatsTab({required this.classId});
+
+  @override
+  State<_ConceptStatsTab> createState() => _ConceptStatsTabState();
+}
+
+class _ConceptStatsTabState extends State<_ConceptStatsTab> {
+  late Future<List<Map<String, dynamic>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = FirestoreService.instance.fetchConceptStats(widget.classId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: () async => setState(() {
+        _future =
+            FirestoreService.instance.fetchConceptStats(widget.classId);
+      }),
+      child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snap) {
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final stats = snap.data!;
+          if (stats.isEmpty) {
+            return ListView(
+              children: const [
+                Padding(
+                  padding: EdgeInsets.all(48),
+                  child: Center(
+                      child: Text('아직 오답 데이터가 없어요.\n학생들이 수학 미션을 제출하면 여기에 취약 개념이 표시됩니다.',
+                          textAlign: TextAlign.center)),
+                ),
+              ],
+            );
+          }
+          final maxWrong = stats.first['wrongCount'] as int;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    '📊 우리 반 취약 개념 분석\n오답이 많이 나온 개념 순서입니다. 아래로 당기면 새로고침됩니다.',
+                    style: TextStyle(height: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...stats.map((s) {
+                final tag = s['tag'] as String;
+                final wrong = s['wrongCount'] as int;
+                final students =
+                    (s['studentNames'] as Set<String>).toList()..sort();
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(tag,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15)),
+                            ),
+                            Text('오답 $wrong회',
+                                style: TextStyle(
+                                    color: Colors.deepOrange.shade400,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: wrong / maxWrong,
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(4),
+                          color: Colors.deepOrange.shade300,
+                          backgroundColor: Colors.orange.shade50,
+                        ),
+                        const SizedBox(height: 8),
+                        Text('어려워한 학생: ${students.join(', ')}',
+                            style: const TextStyle(
+                                fontSize: 12.5, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------
+// 탭 3: 동학년 공동 문제 은행 관리
 // ---------------------------------------------------------------------
 class _ContentBankTab extends StatefulWidget {
   const _ContentBankTab();

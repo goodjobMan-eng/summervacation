@@ -99,11 +99,12 @@ exports.dailyMissionCheck = onSchedule(
 
 /** 한 학생의 당일 4대 미션 수행 여부를 확인하고 미완료 목록을 반환 */
 async function findMissingMissions(studentRef, dateKey, mathDayId, writingDayId) {
-  const [mathSnap, writingSnap, selfCheckSnap, emotionSnap] = await Promise.all([
+  const [mathSnap, writingSnap, selfCheckSnap, emotionSnap, exerciseSnap] = await Promise.all([
     mathDayId ? studentRef.collection("mathProgress").doc(mathDayId).get() : null,
     writingDayId ? studentRef.collection("writingSubmissions").doc(writingDayId).get() : null,
     studentRef.collection("selfChecks").doc(dateKey).get(),
     studentRef.collection("emotions").doc(dateKey).get(),
+    studentRef.collection("exercises").doc(dateKey).get(),
   ]);
 
   const missing = [];
@@ -129,6 +130,12 @@ async function findMissingMissions(studentRef, dateKey, mathDayId, writingDayId)
     missing.push({
       type: "emotion",
       message: "오늘 기분은 어땠나요? 감정 체크인을 잊지 마세요! 😊",
+    });
+  }
+  if (!(exerciseSnap.exists && (exerciseSnap.data().entries ?? []).length > 0)) {
+    missing.push({
+      type: "exercise",
+      message: "오늘 몸을 움직였나요? 운동 기록을 남겨 주세요! 🏃",
     });
   }
   return missing;
@@ -199,17 +206,26 @@ exports.gradeMathDay = onCall(async (request) => {
   if (!bankSnap.exists) throw new HttpsError("not-found", "해당 일차 문제가 없습니다.");
   const problems = bankSnap.data().problems ?? [];
 
-  // ---- 서버 측 채점 ----
-  let allCorrect = true;
+  // ---- 서버 측 채점: 문제별로 채점하고 틀린 문제의 개념 태그를 기록 ----
+  //      (교사 대시보드 '개념 분석'이 wrongTags를 집계해 취약 개념을 보여줌)
+  const wrongTags = [];
+  const wrongProblemIds = [];
   for (const p of problems) {
+    let correct;
     if (p.kind === "netDrawing") {
-      if (!linesMatch(netLines?.[p.id] ?? [], p.answerLines ?? [])) allCorrect = false;
+      correct = linesMatch(netLines?.[p.id] ?? [], p.answerLines ?? []);
     } else {
-      const given = String(answers?.[p.id] ?? "").trim();
-      if (given !== String(p.answer).trim()) allCorrect = false;
+      const given = String(answers?.[p.id] ?? "").trim().replace(/\s+/g, "");
+      correct = given === String(p.answer).trim().replace(/\s+/g, "");
     }
-    if (!allCorrect) break;
+    if (!correct) {
+      wrongProblemIds.push(p.id);
+      if (p.tag) wrongTags.push(p.tag);
+    }
   }
+  const total = problems.length;
+  const correctCount = total - wrongProblemIds.length;
+  const allCorrect = wrongProblemIds.length === 0;
 
   const progressRef = db.doc(
     `classes/${user.classId}/students/${uid}/mathProgress/${dayId}`
@@ -219,12 +235,17 @@ exports.gradeMathDay = onCall(async (request) => {
       answers: answers ?? {},
       userLines: netLines ?? {},
       isCompleted: allCorrect, // Admin SDK는 Rules를 우회 — 서버만 확정 가능
+      correctCount,
+      total,
+      wrongTags,          // 마지막 제출 기준 취약 개념 태그
+      wrongProblemIds,
+      attempts: admin.firestore.FieldValue.increment(1),
       gradedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
 
-  return { isCompleted: allCorrect };
+  return { isCompleted: allCorrect, correctCount, total, wrongProblemIds };
 });
 
 /**
@@ -258,8 +279,8 @@ exports.submitWriting = onCall(async (request) => {
   if (typeof dayId !== "string" || !/^day\d{2}$/.test(dayId)) {
     throw new HttpsError("invalid-argument", "dayId가 올바르지 않습니다.");
   }
-  if (typeof content !== "string" || content.trim().length < 50) {
-    throw new HttpsError("invalid-argument", "글은 최소 50자 이상 작성해 주세요.");
+  if (typeof content !== "string" || content.trim().length < 100) {
+    throw new HttpsError("invalid-argument", "글은 최소 100자 이상 작성해 주세요.");
   }
 
   const userSnap = await db.collection("users").doc(uid).get();

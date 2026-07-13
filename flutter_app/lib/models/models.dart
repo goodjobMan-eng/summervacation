@@ -72,6 +72,7 @@ class SchoolClass {
 class MathProblem {
   final String id;
   final String kind; // 'multipleChoice' | 'shortAnswer' | 'netDrawing'
+  final String tag; // 개념 태그 (교사 대시보드 '개념 분석'에서 집계)
   final String question;
   final List<String> choices;
   final String? answer;
@@ -80,6 +81,7 @@ class MathProblem {
   const MathProblem({
     required this.id,
     required this.kind,
+    this.tag = '',
     required this.question,
     this.choices = const [],
     this.answer,
@@ -89,6 +91,7 @@ class MathProblem {
   factory MathProblem.fromMap(Map<String, dynamic> m) => MathProblem(
         id: m['id'],
         kind: m['kind'],
+        tag: m['tag'] ?? '',
         question: m['question'],
         choices: List<String>.from(m['choices'] ?? []),
         answer: m['answer']?.toString(),

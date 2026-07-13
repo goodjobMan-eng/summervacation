@@ -34,12 +34,13 @@ firestore-root
 │     grade: 6
 │     isActive: bool
 │
-├── mathBank/{dayId}                     # ★ 동학년 공유: 수학 28일 커리큘럼
-│     day: 1..28                         #   dayId 예: "day01" ~ "day28"
+├── mathBank/{dayId}                     # ★ 동학년 공유: 수학 28일 × 10문제
+│     day: 1..28                         #   단원별 3일(3세트) × 6단원 + 복습 10일
 │     unit: string                       #   단원명 (분수의 나눗셈, 전개도, ...)
 │     type: "concept" | "review"        #   개념 18일 + 혼합 복습 10일
-│     problems: [
+│     problems: [                        #   하루 10문제
 │       { id, kind: "multipleChoice"|"shortAnswer"|"netDrawing",
+│         tag: string,                           # ★ 개념 태그 (취약 개념 분석용)
 │         question, choices?, answer?,          # 일반 문제
 │         answerLines?: [                        # 전개도 문제 (netDrawing)
 │           { x1, y1, x2, y2, type: 0|1 }        #   type 0=실선(자르기), 1=점선(접기)
@@ -73,7 +74,18 @@ firestore-root
             │     answers: map               # 학생 답안 (클라이언트 기록 가능)
             │     userLines: [...]           # 전개도 그리기 결과
             │     isCompleted: bool          # ★ 서버(Cloud Function)만 쓰기 가능
+            │     correctCount, total        # ★ 서버 채점 점수 (예: 8/10)
+            │     wrongTags: [string]        # ★ 틀린 문제의 개념 태그 → 개념 분석
+            │     attempts: number           # ★ 제출 횟수
             │     gradedAt: timestamp        # ★ 서버만 쓰기 가능
+
+            ├── exercises/{dateKey}          # 오늘의 운동 기록 (여러 종목 가능)
+            │     entries: [                 #   기록 1개 이상이면 미션 완료
+            │       { categoryId, categoryName, emoji,
+            │         detail?      # 맨몸 운동·기타: 주관식 (예: 팔굽혀펴기 20개)
+            │         value?, unit?  # 달리기·자전거·줄넘기: 수치 (km, 개)
+            │         sport?, minutes?  # 스포츠: 종목 + 시간(분)
+            │       } ]
             │
             ├── writingSubmissions/{dayId}   # 글쓰기 제출 (day01..day30)
             │     content: string

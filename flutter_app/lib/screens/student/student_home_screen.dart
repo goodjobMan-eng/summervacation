@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/self_check_list.dart';
 import 'emotion_checkin_screen.dart';
+import 'exercise_screen.dart';
 import 'math_mission_screen.dart';
 import 'writing_screen.dart';
 
@@ -102,6 +103,19 @@ class StudentHomeScreen extends StatelessWidget {
                 ),
               ),
               _MissionTile(
+                emoji: '🏃',
+                title: '오늘의 운동 기록',
+                subtitle: '맨몸 운동, 달리기, 스포츠… 몸을 움직여요!',
+                enabled: true,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ExerciseScreen(classId: user.classId!),
+                  ),
+                ),
+              ),
+              _MissionTile(
                 emoji: '💛',
                 title: '오늘 기분 다시 알려주기',
                 subtitle: '기분이 바뀌면 언제든지 다시 눌러요',
@@ -183,6 +197,7 @@ class _NotificationScreen extends StatelessWidget {
                     'math' => '📐',
                     'writing' => '✍️',
                     'selfCheck' => '✅',
+                    'exercise' => '🏃',
                     'reminder' => '📣',
                     _ => '😊',
                   },

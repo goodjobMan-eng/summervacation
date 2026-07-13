@@ -153,6 +153,15 @@ service cloud.firestore {
           allow delete: if false;
         }
 
+        // ----- 운동 기록: 본인만 기록 -----
+        match /exercises/{dateKey} {
+          allow read: if isTeacherOf(classId)
+            || (isApprovedStudentOf(classId) && request.auth.uid == studentId);
+          allow create, update: if isApprovedStudentOf(classId)
+            && request.auth.uid == studentId;
+          allow delete: if false;
+        }
+
         // ----- 감정 체크인: 학생 본인 쓰기, 열람은 본인+담임만 -----
         //       (학생들끼리는 서로 볼 수 없음 — read 규칙이 원천 차단)
         match /emotions/{dateKey} {

@@ -112,6 +112,32 @@ class FirestoreService {
     return doc.exists;
   }
 
+  // ---------- 운동 기록 ----------
+  DocumentReference<Map<String, dynamic>> _exerciseRef(String classId) =>
+      _db.doc('classes/$classId/students/$uid/exercises/${dateKey()}');
+
+  /// 오늘의 운동 기록 실시간 스트림
+  Stream<List<Map<String, dynamic>>> watchTodayExercises(String classId) =>
+      _exerciseRef(classId).snapshots().map((d) =>
+          List<Map<String, dynamic>>.from(d.data()?['entries'] ?? []));
+
+  /// 운동 기록 추가 (하루에 여러 종목 기록 가능)
+  Future<void> addExerciseEntry(
+      String classId, Map<String, dynamic> entry) async {
+    await _exerciseRef(classId).set({
+      'entries': FieldValue.arrayUnion([entry]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// 운동 기록 삭제 (본인 기록만)
+  Future<void> removeExerciseEntry(
+      String classId, Map<String, dynamic> entry) async {
+    await _exerciseRef(classId).update({
+      'entries': FieldValue.arrayRemove([entry]),
+    });
+  }
+
   /// 제출 완료한 글쓰기 day 번호 집합 (Streak 트래커용)
   Stream<Set<int>> watchSubmittedWritingDays(String classId) => _db
       .collection('classes/$classId/students/$uid/writingSubmissions')
@@ -142,15 +168,20 @@ class FirestoreService {
       _db.doc('$base/writingSubmissions/${dayId(missionDay)}').snapshots(),
       _db.doc('$base/selfChecks/$today').snapshots(),
       _db.doc('$base/emotions/$today').snapshots(),
+      _db.doc('$base/exercises/$today').snapshots(),
     ];
     return _combineLatest(streams).map((docs) => {
           'math': docs[0].data()?['isCompleted'] == true,
+          'mathScore': docs[0].data()?['correctCount'],
+          'mathTotal': docs[0].data()?['total'],
           'writing': docs[1].data()?['isSubmitted'] == true,
           'selfCheck': docs[2].data()?['allDone'] == true,
           'emotionEmoji': docs[3].data()?['emoji'],
           'emotionMood': docs[3].data()?['mood'],
           'emotionReason': docs[3].data()?['reason'],
           'emotionComment': docs[3].data()?['comment'],
+          'exercise':
+              (docs[4].data()?['entries'] as List? ?? []).isNotEmpty,
         });
   }
 
@@ -226,6 +257,7 @@ class FirestoreService {
         if (r['writing'] != true) '글쓰기',
         if (r['selfCheck'] != true) '자기 점검',
         if (r['emotionEmoji'] == null) '감정 체크인',
+        if (r['exercise'] != true) '운동',
       ];
       if (missing.isEmpty) continue;
       await sendReminderToStudent(
@@ -252,6 +284,7 @@ class FirestoreService {
         _db.doc('$base/writingSubmissions/${dayId(missionDay)}').get(),
         _db.doc('$base/selfChecks/$today').get(),
         _db.doc('$base/emotions/$today').get(),
+        _db.doc('$base/exercises/$today').get(),
       ]);
       return {
         'uid': s.id,
@@ -261,7 +294,41 @@ class FirestoreService {
         'selfCheck': results[2].data()?['allDone'] == true,
         'emotionEmoji': results[3].data()?['emoji'],
         'emotionComment': results[3].data()?['comment'],
+        'exercise':
+            (results[4].data()?['entries'] as List? ?? []).isNotEmpty,
       };
     }));
+  }
+
+  // ---------- 개념 분석 (교사용) ----------
+  /// 학급 전체의 수학 오답 태그를 집계해 취약 개념 순위를 반환.
+  /// 반환 형식: [{tag, wrongCount, studentNames(Set)}...] 오답 많은 순.
+  Future<List<Map<String, dynamic>>> fetchConceptStats(String classId) async {
+    final students = await _db.collection('classes/$classId/students').get();
+    final tagWrong = <String, int>{};
+    final tagStudents = <String, Set<String>>{};
+
+    await Future.wait(students.docs.map((s) async {
+      final progress = await _db
+          .collection('classes/$classId/students/${s.id}/mathProgress')
+          .get();
+      for (final doc in progress.docs) {
+        for (final tag in List<String>.from(doc.data()['wrongTags'] ?? [])) {
+          tagWrong[tag] = (tagWrong[tag] ?? 0) + 1;
+          (tagStudents[tag] ??= {}).add(s.data()['name'] ?? s.id);
+        }
+      }
+    }));
+
+    final stats = tagWrong.entries
+        .map((e) => {
+              'tag': e.key,
+              'wrongCount': e.value,
+              'studentNames': tagStudents[e.key] ?? <String>{},
+            })
+        .toList()
+      ..sort((a, b) =>
+          (b['wrongCount'] as int).compareTo(a['wrongCount'] as int));
+    return stats;
   }
 }

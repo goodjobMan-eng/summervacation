@@ -23,10 +23,12 @@ class _WritingScreenState extends State<WritingScreen> {
   final _controller = TextEditingController();
   bool _busy = false;
 
+  static const _minLength = 100; // 6학년 수준: 최소 100자
+
   Future<void> _submit() async {
-    if (_controller.text.trim().length < 50) {
+    if (_controller.text.trim().length < _minLength) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('50자 이상 작성해 주세요!')),
+        const SnackBar(content: Text('생각을 조금 더 풀어서 100자 이상 써 보세요! ✏️')),
       );
       return;
     }
@@ -101,12 +103,26 @@ class _WritingScreenState extends State<WritingScreen> {
                   TextField(
                     controller: _controller,
                     maxLines: 12,
+                    onChanged: (_) => setState(() {}),
                     decoration: const InputDecoration(
-                      hintText: '여기에 글을 써 보세요. (50자 이상)',
+                      hintText: '여기에 글을 써 보세요. (100자 이상)',
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, right: 4),
+                    child: Text(
+                      '${_controller.text.trim().length} / $_minLength자',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _controller.text.trim().length >= _minLength
+                            ? Colors.green
+                            : Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   FilledButton(
                     onPressed: _busy ? null : _submit,
                     child: Padding(
