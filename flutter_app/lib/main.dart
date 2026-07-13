@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import 'firebase_options.dart';
 import 'models/models.dart';
 import 'screens/auth/join_class_screen.dart';
 import 'screens/student/emotion_checkin_screen.dart';
@@ -11,9 +12,9 @@ import 'services/firestore_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // FlutterFire CLI로 생성한 firebase_options.dart의 옵션을 사용하세요:
-  //   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MajiHomeworkApp());
 }
 
