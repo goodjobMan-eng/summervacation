@@ -127,7 +127,7 @@ class _EmotionCheckInScreenState extends State<EmotionCheckInScreen> {
                     .headlineMedium
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text('솔직하게 골라도 괜찮아요.\n여기서 고른 마음은 선생님만 볼 수 있어요.',
+            Text('솔직하게 골라도 괜찮아요.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.brown.shade300, height: 1.5)),
             const SizedBox(height: 28),
@@ -204,7 +204,7 @@ class _EmotionCheckInScreenState extends State<EmotionCheckInScreen> {
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: '더 하고 싶은 말이 있나요? (선택)',
-                  hintText: '선생님에게만 보여요. 편하게 적어 보세요.',
+                  hintText: '편하게 적어 보세요.',
                 ),
               ),
             ],

@@ -88,7 +88,7 @@ class _TeacherCreateClassScreenState extends State<TeacherCreateClassScreen> {
           TextField(
             controller: _school,
             decoration: const InputDecoration(
-                labelText: '학교 이름', hintText: '예: 마지초등학교'),
+                labelText: '학교 이름', hintText: '예: ○○초등학교'),
           ),
           const SizedBox(height: 12),
           TextField(

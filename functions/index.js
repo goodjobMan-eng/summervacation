@@ -1,5 +1,5 @@
 /**
- * 마지초 6학년 방학숙제 앱 — Cloud Functions
+ * 6학년 여름방학 숙제 앱 — Cloud Functions
  *
  *  1) dailyMissionCheck  : 매일 저녁, 모든 활성 학급을 순회하며 4대 미션
  *                          미제출 학생에게 맞춤 알림을 자동 삽입하는 스케줄러

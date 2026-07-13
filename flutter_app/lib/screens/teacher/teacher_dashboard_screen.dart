@@ -7,6 +7,7 @@ import '../../data/writing_topics.dart';
 import '../../models/models.dart';
 import '../../services/firestore_service.dart';
 import 'achievement_report_screen.dart';
+import 'writing_review_screen.dart';
 
 /// 선생님용 학급 대시보드 (Teacher Portal)
 ///  - 탭 1: 본인 학급 학생들의 당일 4대 미션 현황 + 감정 상태 모니터링
@@ -190,6 +191,23 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
                                     _sendBulkReminders(cls.currentMissionDay),
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.menu_book_outlined),
+                            label: const Text('주제 글쓰기 모아보기'),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => WritingReviewScreen(
+                                  classId: widget.classId,
+                                  initialDay: cls.currentMissionDay,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -354,7 +372,42 @@ class _StudentStatusRow extends StatelessWidget {
               status['emotionEmoji'] ?? '❔',
               style: const TextStyle(fontSize: 30),
             ),
-            title: Text(name),
+            // 최근 3일 중 2일 이상 힘든 기분이면 이름 옆에 상시 배지 표시
+            title: FutureBuilder<int>(
+              future: FirestoreService.instance
+                  .getRecentNegativeDays(classId, studentUid),
+              builder: (context, snap) {
+                final warn = (snap.data ?? 0) >= 2;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(child: Text(name)),
+                    if (warn)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Tooltip(
+                          message: '최근 3일 중 ${snap.data}일 힘든 기분 — 마음을 살펴봐 주세요',
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFDEBE8),
+                              borderRadius: BorderRadius.circular(10),
+                              border:
+                                  Border.all(color: const Color(0xFFE4574A)),
+                            ),
+                            child: const Text('💛 관심',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFFE4574A))),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
             subtitle: _buildEmotionSubtitle(status),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,

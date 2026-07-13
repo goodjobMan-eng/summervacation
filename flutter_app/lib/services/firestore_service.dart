@@ -176,6 +176,26 @@ class FirestoreService {
         doc.data()?['notifications'] ?? []);
   }
 
+  /// 내 오늘 미션 완료 현황 1회 조회 (홈 화면 ✔ 표시용)
+  /// 실시간 연동 없이, 홈에 돌아올 때마다 한 번씩 읽어 갱신한다.
+  Future<Map<String, bool>> getMyDailyStatus(
+      String classId, int missionDay) async {
+    final base = 'classes/$classId/students/$uid';
+    final today = dateKey();
+    final r = await Future.wait([
+      _db.doc('$base/mathProgress/${dayId(missionDay)}').get(),
+      _db.doc('$base/writingSubmissions/${dayId(missionDay)}').get(),
+      _db.doc('$base/selfChecks/$today').get(),
+      _db.doc('$base/exercises/$today').get(),
+    ]);
+    return {
+      'math': r[0].data()?['isCompleted'] == true,
+      'writing': r[1].data()?['isSubmitted'] == true,
+      'selfCheck': r[2].data()?['allDone'] == true,
+      'exercise': (r[3].data()?['entries'] as List? ?? []).isNotEmpty,
+    };
+  }
+
   // ---------- 교사 대시보드 ----------
   /// 학급 학생 목록 실시간 스트림 (가입/탈퇴 즉시 반영)
   Stream<QuerySnapshot<Map<String, dynamic>>> watchClassStudents(
@@ -257,6 +277,34 @@ class FirestoreService {
   Future<void> markAlertRead(String classId, String alertId) => _db
       .doc('classes/$classId/teacherAlerts/$alertId')
       .update({'read': true});
+
+  /// 최근 3일의 감정 체크인 중 부정적 기분(negative) 일수 (경고 배지용)
+  Future<int> getRecentNegativeDays(String classId, String studentUid) async {
+    final snap = await _db
+        .collection('classes/$classId/students/$studentUid/emotions')
+        .orderBy(FieldPath.documentId, descending: true)
+        .limit(3)
+        .get();
+    return snap.docs.where((d) => d.data()['mood'] == 'negative').length;
+  }
+
+  /// 특정 일차의 학급 전체 글쓰기 제출을 한 번에 모아보기 (교사용)
+  Future<List<Map<String, dynamic>>> fetchWritingSubmissions(
+      String classId, int day) async {
+    final students = await _db.collection('classes/$classId/students').get();
+    final rows = await Future.wait(students.docs.map((s) async {
+      final doc = await _db
+          .doc('classes/$classId/students/${s.id}/writingSubmissions/${dayId(day)}')
+          .get();
+      return {
+        'name': s.data()['name'] ?? s.id,
+        'isSubmitted': doc.data()?['isSubmitted'] == true,
+        'content': doc.data()?['content'] ?? '',
+      };
+    }));
+    rows.sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+    return rows;
+  }
 
   /// 교사 → 학생 즉시 알림 발송 (학생 문서 notifications 배열에 삽입)
   Future<void> sendReminderToStudent(

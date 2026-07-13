@@ -1,6 +1,6 @@
 {
   "name": "maji-homework-functions",
-  "description": "마지초 6학년 방학숙제 앱 — Cloud Functions (스케줄러 / 채점 / 학급 가입)",
+  "description": "6학년 여름방학 숙제 앱 — Cloud Functions (스케줄러 / 채점 / 학급 가입)",
   "engines": {
     "node": "20"
   },
