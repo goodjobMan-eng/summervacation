@@ -1,0 +1,36 @@
+{
+  "name": "여름방학 숙제 친구",
+  "short_name": "방학숙제",
+  "description": "6학년 여름방학을 알차게, 즐겁게! 수학·글쓰기·자기점검·감정·운동 미션을 매일 기록해요.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FFF8F0",
+  "theme_color": "#FF8A65",
+  "orientation": "portrait-primary",
+  "lang": "ko",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/Icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/Icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/Icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/Icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

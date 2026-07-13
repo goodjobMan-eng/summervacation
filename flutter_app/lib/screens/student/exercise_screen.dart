@@ -61,6 +61,15 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   final _numberController = TextEditingController();
   final _minutesController = TextEditingController();
   bool _busy = false;
+  List<Map<String, dynamic>>? _entries; // 1회 조회 후 로컬 관리
+
+  @override
+  void initState() {
+    super.initState();
+    FirestoreService.instance
+        .getTodayExercises(widget.classId)
+        .then((list) => mounted ? setState(() => _entries = list) : null);
+  }
 
   bool get _canSubmit {
     switch (_selected.inputType) {
@@ -99,7 +108,10 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       _textController.clear();
       _numberController.clear();
       _minutesController.clear();
-      setState(() => _selectedSport = null);
+      setState(() {
+        _selectedSport = null;
+        (_entries ??= []).add(entry); // 서버 재조회 없이 로컬 갱신
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('🎉 운동 기록 완료! 몸도 마음도 튼튼!')),
@@ -215,11 +227,12 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
           Text('오늘 내가 한 운동',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          StreamBuilder<List<Map<String, dynamic>>>(
-            stream: FirestoreService.instance
-                .watchTodayExercises(widget.classId),
-            builder: (context, snap) {
-              final entries = snap.data ?? [];
+          Builder(
+            builder: (context) {
+              final entries = _entries;
+              if (entries == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
               if (entries.isEmpty) {
                 return const Card(
                   child: Padding(
@@ -240,8 +253,11 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_outline),
                               tooltip: '기록 삭제',
-                              onPressed: () => FirestoreService.instance
-                                  .removeExerciseEntry(widget.classId, e),
+                              onPressed: () async {
+                                await FirestoreService.instance
+                                    .removeExerciseEntry(widget.classId, e);
+                                setState(() => _entries!.remove(e));
+                              },
                             ),
                           ),
                         ))

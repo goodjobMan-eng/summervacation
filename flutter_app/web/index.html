@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="6학년 여름방학을 알차게, 즐겁게! 수학·글쓰기·자기점검·감정·운동 미션을 매일 기록해요.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <!-- PWA: 홈 화면에 추가하면 앱처럼 전체 화면으로 실행 -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="방학숙제 친구">
+  <meta name="theme-color" content="#FF8A65">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+
+  <title>여름방학 숙제 친구</title>
+  <style>
+    /* 앱 로딩 동안 보여줄 따뜻한 스플래시 */
+    html, body { margin: 0; height: 100%; background: #FFF8F0; }
+    #splash {
+      height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px;
+      font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+      color: #5D4037;
+    }
+    #splash .sun { font-size: 64px; animation: bounce 1.2s ease-in-out infinite; }
+    #splash b { font-size: 20px; }
+    @keyframes bounce { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+    @media (prefers-reduced-motion: reduce) { #splash .sun { animation: none; } }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <div class="sun">🌞</div>
+    <b>여름방학 숙제 친구</b>
+    <span>잠깐만 기다려 주세요…</span>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

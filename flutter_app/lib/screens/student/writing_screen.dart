@@ -22,8 +22,16 @@ class WritingScreen extends StatefulWidget {
 class _WritingScreenState extends State<WritingScreen> {
   final _controller = TextEditingController();
   bool _busy = false;
+  late Future<Set<int>> _submittedDays; // 1회 조회 (상시 리스너 없음)
 
   static const _minLength = 100; // 6학년 수준: 최소 100자
+
+  @override
+  void initState() {
+    super.initState();
+    _submittedDays =
+        FirestoreService.instance.getSubmittedWritingDays(widget.classId);
+  }
 
   Future<void> _submit() async {
     if (_controller.text.trim().length < _minLength) {
@@ -37,6 +45,11 @@ class _WritingScreenState extends State<WritingScreen> {
       await FirestoreService.instance
           .submitWriting(widget.currentDay, _controller.text);
       if (mounted) {
+        setState(() {
+          // 제출 직후에만 트래커를 한 번 갱신
+          _submittedDays = FirestoreService.instance
+              .getSubmittedWritingDays(widget.classId);
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('🎉 오늘의 글쓰기 제출 완료!')),
         );
@@ -54,9 +67,9 @@ class _WritingScreenState extends State<WritingScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 연속 제출(Streak) 트래커
-          StreamBuilder<Set<int>>(
-            stream: fs.watchSubmittedWritingDays(widget.classId),
+          // 연속 제출(Streak) 트래커 — 1회 조회, 제출 시에만 갱신
+          FutureBuilder<Set<int>>(
+            future: _submittedDays,
             builder: (context, snap) => StreakTracker(
               submittedDays: snap.data ?? {},
               currentDay: widget.currentDay,

@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
@@ -9,10 +9,34 @@ import 'exercise_screen.dart';
 import 'math_mission_screen.dart';
 import 'writing_screen.dart';
 
-/// 학생 홈 — 오늘의 4대 미션 진입점 + 알림
+/// 학생 홈 — 오늘의 5대 미션 진입점 + 알림
+/// 한 번 입장하면 로그아웃 전까지 자동 로그인이 유지된다.
 class StudentHomeScreen extends StatelessWidget {
   final AppUser user;
   const StudentHomeScreen({super.key, required this.user});
+
+  /// 익명 계정이므로 로그아웃하면 같은 계정으로 다시 들어올 수 없다.
+  /// 실수 방지를 위해 확인 후 진행.
+  static Future<void> _confirmLogout(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('정말 로그아웃할까요?'),
+        content: const Text(
+            '로그아웃하면 다음에 참여 코드와 비밀번호로 새로 들어와야 해요.\n'
+            '지금까지의 기록은 선생님 화면에 안전하게 남아 있어요.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('로그아웃')),
+        ],
+      ),
+    );
+    if (ok == true) await FirebaseAuth.instance.signOut();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +64,12 @@ class StudentHomeScreen extends StatelessWidget {
                         _NotificationScreen(classId: user.classId!),
                   ),
                 ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (_) => _confirmLogout(context),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'logout', child: Text('로그아웃')),
+                ],
               ),
             ],
           ),
@@ -169,7 +199,7 @@ class _MissionTile extends StatelessWidget {
   }
 }
 
-/// 스케줄러가 notifications 배열에 삽입한 알림 목록
+/// 스케줄러가 notifications 배열에 삽입한 알림 목록 (열 때 1회만 조회)
 class _NotificationScreen extends StatelessWidget {
   final String classId;
   const _NotificationScreen({required this.classId});
@@ -178,11 +208,13 @@ class _NotificationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('알림')),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: FirestoreService.instance.watchStudentDoc(classId),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: FirestoreService.instance.getMyNotifications(classId),
         builder: (context, snap) {
-          final items = List<Map<String, dynamic>>.from(
-              snap.data?.data()?['notifications'] ?? [])
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final items = List<Map<String, dynamic>>.from(snap.data!)
             ..sort((a, b) => (b['date'] ?? '').compareTo(a['date'] ?? ''));
           if (items.isEmpty) {
             return const Center(child: Text('알림이 없어요 🎉'));

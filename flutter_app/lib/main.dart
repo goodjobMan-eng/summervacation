@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
@@ -17,6 +19,29 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 한 번 로그인하면 로그아웃 전까지 유지 (브라우저를 닫아도 유지됨)
+  if (kIsWeb) {
+    await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+  }
+
+  // 오프라인 캐시 활성화 — 이미 받은 문제/주제/기록은 서버에 다시 묻지 않고
+  // 기기 캐시에서 읽어, 불필요한 서버 읽기를 크게 줄인다.
+  if (kIsWeb) {
+    try {
+      await FirebaseFirestore.instance.enablePersistence(
+        const PersistenceSettings(synchronizeTabs: true),
+      );
+    } catch (_) {
+      // 여러 탭이 이미 열려 있는 등 캐시를 켤 수 없는 경우 — 앱은 정상 동작
+    }
+  } else {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  }
+
   runApp(const MajiHomeworkApp());
 }
 

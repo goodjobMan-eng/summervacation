@@ -58,11 +58,6 @@ class FirestoreService {
         .call({'code': code, 'password': password, 'name': name});
   }
 
-  /// 학급 내 학생 문서 스트림 (알림 목록 등)
-  Stream<DocumentSnapshot<Map<String, dynamic>>> watchStudentDoc(
-          String classId) =>
-      _db.doc('classes/$classId/students/$uid').snapshots();
-
   // ---------- 공유 콘텐츠 ----------
   Future<MathDay?> getMathDay(int day) async {
     final doc = await _db.doc('mathBank/${dayId(day)}').get();
@@ -135,11 +130,6 @@ class FirestoreService {
   DocumentReference<Map<String, dynamic>> _exerciseRef(String classId) =>
       _db.doc('classes/$classId/students/$uid/exercises/${dateKey()}');
 
-  /// 오늘의 운동 기록 실시간 스트림
-  Stream<List<Map<String, dynamic>>> watchTodayExercises(String classId) =>
-      _exerciseRef(classId).snapshots().map((d) =>
-          List<Map<String, dynamic>>.from(d.data()?['entries'] ?? []));
-
   /// 운동 기록 추가 (하루에 여러 종목 기록 가능)
   Future<void> addExerciseEntry(
       String classId, Map<String, dynamic> entry) async {
@@ -157,15 +147,34 @@ class FirestoreService {
     });
   }
 
-  /// 제출 완료한 글쓰기 day 번호 집합 (Streak 트래커용)
-  Stream<Set<int>> watchSubmittedWritingDays(String classId) => _db
-      .collection('classes/$classId/students/$uid/writingSubmissions')
-      .where('isSubmitted', isEqualTo: true)
-      .snapshots()
-      .map((s) => s.docs
-          .map((d) => int.tryParse(d.id.replaceFirst('day', '')) ?? 0)
-          .where((n) => n > 0)
-          .toSet());
+  /// 제출 완료한 글쓰기 day 번호 집합 (Streak 트래커용, 1회 조회)
+  /// 학생 화면은 상시 리스너 대신 1회 읽기 + 제출 후 갱신으로 동작해
+  /// 서버와의 실시간 연결을 유지하지 않는다.
+  Future<Set<int>> getSubmittedWritingDays(String classId) async {
+    final snap = await _db
+        .collection('classes/$classId/students/$uid/writingSubmissions')
+        .where('isSubmitted', isEqualTo: true)
+        .get();
+    return snap.docs
+        .map((d) => int.tryParse(d.id.replaceFirst('day', '')) ?? 0)
+        .where((n) => n > 0)
+        .toSet();
+  }
+
+  /// 오늘의 운동 기록 1회 조회
+  Future<List<Map<String, dynamic>>> getTodayExercises(
+      String classId) async {
+    final doc = await _exerciseRef(classId).get();
+    return List<Map<String, dynamic>>.from(doc.data()?['entries'] ?? []);
+  }
+
+  /// 내 알림 목록 1회 조회
+  Future<List<Map<String, dynamic>>> getMyNotifications(
+      String classId) async {
+    final doc = await _db.doc('classes/$classId/students/$uid').get();
+    return List<Map<String, dynamic>>.from(
+        doc.data()?['notifications'] ?? []);
+  }
 
   // ---------- 교사 대시보드 ----------
   /// 학급 학생 목록 실시간 스트림 (가입/탈퇴 즉시 반영)

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/math_curriculum.dart';
@@ -46,6 +47,33 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 ),
               );
             },
+          ),
+          PopupMenuButton<String>(
+            onSelected: (_) async {
+              // 익명 계정이므로 로그아웃하면 이 기기에서 학급 관리 권한을
+              // 다시 얻을 수 없음 — 반드시 확인 후 진행
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('정말 로그아웃할까요?'),
+                  content: const Text(
+                      '⚠️ 로그아웃하면 이 브라우저에서 학급 관리 계정에 다시 '
+                      '접속할 수 없습니다.\n학급 운영 기간에는 로그아웃하지 않는 것을 권장합니다.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('취소')),
+                    FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('로그아웃')),
+                  ],
+                ),
+              );
+              if (ok == true) await FirebaseAuth.instance.signOut();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'logout', child: Text('로그아웃')),
+            ],
           ),
         ],
       ),
