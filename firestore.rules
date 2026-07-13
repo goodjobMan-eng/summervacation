@@ -94,6 +94,13 @@ service cloud.firestore {
         allow write: if isTeacherOf(classId);
       }
 
+      // 감정 위기 경고: Cloud Function만 생성, 담임만 열람/확인 처리
+      //  (학생은 자신에 대한 경고조차 볼 수 없음 — 낙인 방지)
+      match /teacherAlerts/{alertId} {
+        allow read, update, delete: if isTeacherOf(classId);
+        allow create: if false;
+      }
+
       // 학생 문서
       match /students/{studentId} {
         // 교사: 자기 학급 전체 열람/관리. 학생: 본인 문서만.

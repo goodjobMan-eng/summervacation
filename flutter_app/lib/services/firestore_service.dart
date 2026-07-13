@@ -78,15 +78,30 @@ class FirestoreService {
         .call({'dayId': dayId(day), 'content': content});
   }
 
-  /// 감정 체크인 (오늘 최초 접속 시)
+  /// 감정 체크인 — 기분(emoji/mood)과 이유(reason)를 함께 기록.
+  /// 하루에 여러 번 다시 체크인할 수 있으며, 부정적 기분(negative)을
+  /// 반복해서 기록하면 negativeCount가 쌓여 Cloud Function이
+  /// 담당 교사에게 자동으로 경고 알림을 만든다.
   Future<void> checkInEmotion(
-      String classId, String emoji, String comment) async {
-    await _db
-        .doc('classes/$classId/students/$uid/emotions/${dateKey()}')
-        .set({
+    String classId, {
+    required String emoji,
+    required String mood, // 'positive' | 'neutral' | 'negative'
+    required String reason,
+    String comment = '',
+  }) async {
+    final ref =
+        _db.doc('classes/$classId/students/$uid/emotions/${dateKey()}');
+    final exists = (await ref.get()).exists;
+    await ref.set({
       'emoji': emoji,
+      'mood': mood,
+      'reason': reason,
       'comment': comment,
-      'createdAt': FieldValue.serverTimestamp(),
+      // createdAt은 최초 1회만 기록 (보안 규칙이 수정 시 변경을 차단)
+      if (!exists) 'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'checkInCount': FieldValue.increment(1),
+      if (mood == 'negative') 'negativeCount': FieldValue.increment(1),
     }, SetOptions(merge: true));
   }
 
@@ -133,6 +148,8 @@ class FirestoreService {
           'writing': docs[1].data()?['isSubmitted'] == true,
           'selfCheck': docs[2].data()?['allDone'] == true,
           'emotionEmoji': docs[3].data()?['emoji'],
+          'emotionMood': docs[3].data()?['mood'],
+          'emotionReason': docs[3].data()?['reason'],
           'emotionComment': docs[3].data()?['comment'],
         });
   }
@@ -167,6 +184,20 @@ class FirestoreService {
     );
     return controller.stream;
   }
+
+  /// 담임에게 온 감정 경고 알림(미확인) 실시간 스트림
+  /// (Cloud Function이 부정적 감정 반복 감지 시 생성)
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchTeacherAlerts(
+          String classId) =>
+      _db
+          .collection('classes/$classId/teacherAlerts')
+          .where('read', isEqualTo: false)
+          .snapshots();
+
+  /// 감정 경고 알림 확인 처리
+  Future<void> markAlertRead(String classId, String alertId) => _db
+      .doc('classes/$classId/teacherAlerts/$alertId')
+      .update({'read': true});
 
   /// 교사 → 학생 즉시 알림 발송 (학생 문서 notifications 배열에 삽입)
   Future<void> sendReminderToStudent(

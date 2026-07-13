@@ -84,10 +84,20 @@ firestore-root
             │     checkedItemIds: [string]
             │     allDone: bool
             │
-            └── emotions/{dateKey}           # 일일 감정 체크인
-                  emoji: string              # 😀 😐 😢 😡 😴 ...
+            └── emotions/{dateKey}           # 일일 감정 체크인 (하루 여러 번 갱신 가능)
+                  emoji: string              # 🤩 😄 🙂 😐 😴 😢 😡 😟
+                  mood: string               # positive | neutral | negative
+                  reason: string             # 기분의 이유 (선택지에서 고름)
                   comment: string
+                  checkInCount: number       # 오늘 체크인 횟수
+                  negativeCount: number      # 오늘 부정적 기분 기록 횟수
                   createdAt: timestamp
+
+      ├── teacherAlerts/{studentId_dateKey}  # ★ 감정 위기 경고 (Cloud Function만 생성)
+      │     type: "emotionAlert"             #   부정 감정 하루 3회 이상 또는
+      │     studentId, studentName           #   최근 3일 중 2일 이상이면 자동 생성
+      │     message, emoji, reason, comment  #   담임만 열람 가능 (학생 열람 불가)
+      │     date, read: bool
 ```
 
 ### 설계 근거

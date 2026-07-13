@@ -7,10 +7,13 @@
  *  3) gradeMathDay       : 수학 답안(전개도 포함)을 서버에서 검증하고
  *                          isCompleted를 확정하는 callable (조작 방지)
  *  4) submitWriting      : 글쓰기 제출을 서버 타임스탬프로 확정하는 callable
+ *  5) onEmotionCheckIn   : 부정적 감정이 반복 기록되면(하루 3회 이상 또는
+ *                          최근 3일 중 2일 이상) 담당 교사에게 경고 알림 생성
  */
 
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
@@ -278,3 +281,66 @@ exports.submitWriting = onCall(async (request) => {
 
   return { ok: true };
 });
+
+// =====================================================================
+// 5) 감정 위기 신호 감지 트리거 — 부정적 감정 반복 시 담임에게 경고
+//
+//    발동 조건 (둘 중 하나):
+//      a) 오늘 하루에 부정적 기분을 3회 이상 반복 기록 (negativeCount >= 3)
+//      b) 최근 3일의 체크인 중 2일 이상이 부정적 기분
+//    경고는 classes/{classId}/teacherAlerts/{studentId_dateKey} 문서로
+//    생성되며(하루 1건으로 중복 방지), 교사 대시보드 상단에 표시된다.
+// =====================================================================
+exports.onEmotionCheckIn = onDocumentWritten(
+  "classes/{classId}/students/{studentId}/emotions/{dateKey}",
+  async (event) => {
+    const after = event.data?.after?.data();
+    if (!after || after.mood !== "negative") return;
+
+    const { classId, studentId, dateKey } = event.params;
+    const sameDayNegatives = after.negativeCount ?? 1;
+
+    // 최근 3일(문서 ID = 날짜 키이므로 내림차순 정렬)의 부정 감정 일수 집계
+    const recentSnap = await db
+      .collection(`classes/${classId}/students/${studentId}/emotions`)
+      .orderBy(admin.firestore.FieldPath.documentId(), "desc")
+      .limit(3)
+      .get();
+    const negativeDays = recentSnap.docs.filter(
+      (d) => d.data().mood === "negative"
+    ).length;
+
+    const repeatedToday = sameDayNegatives >= 3;
+    const repeatedDays = negativeDays >= 2;
+    if (!repeatedToday && !repeatedDays) return;
+
+    const studentSnap = await db
+      .doc(`classes/${classId}/students/${studentId}`)
+      .get();
+    const studentName = studentSnap.data()?.name ?? "학생";
+
+    const trigger = repeatedToday
+      ? `오늘 하루에 힘든 기분을 ${sameDayNegatives}번 기록했어요.`
+      : `최근 3일 중 ${negativeDays}일 동안 힘든 기분을 기록했어요.`;
+
+    // 하루 1건으로 중복 방지 (같은 ID에 덮어쓰기)
+    await db
+      .doc(`classes/${classId}/teacherAlerts/${studentId}_${dateKey}`)
+      .set({
+        type: "emotionAlert",
+        studentId,
+        studentName,
+        message: `💛 ${studentName} 학생의 마음을 살펴봐 주세요. ${trigger}`,
+        emoji: after.emoji ?? "",
+        reason: after.reason ?? "",
+        comment: after.comment ?? "",
+        date: dateKey,
+        read: false,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+    console.log(
+      `[onEmotionCheckIn] ${classId}/${studentName}: 감정 경고 생성 (${trigger})`
+    );
+  }
+);

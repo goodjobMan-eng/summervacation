@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
 import 'models/models.dart';
+import 'theme.dart';
 import 'screens/auth/join_class_screen.dart';
 import 'screens/student/emotion_checkin_screen.dart';
 import 'screens/student/student_home_screen.dart';
@@ -25,11 +26,7 @@ class MajiHomeworkApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '마지초 방학숙제',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        useMaterial3: true,
-        fontFamily: 'Pretendard',
-      ),
+      theme: buildKidFriendlyTheme(),
       home: const AuthGate(),
     );
   }

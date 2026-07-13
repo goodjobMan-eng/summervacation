@@ -101,6 +101,7 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                _EmotionAlertBanner(classId: widget.classId),
                 Card(
                   color: Colors.indigo.shade50,
                   child: Padding(
@@ -151,6 +152,77 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
   }
 }
 
+/// 감정 위기 경고 배너 — Cloud Function이 부정적 감정 반복을 감지하면
+/// 여기에 실시간으로 표시된다. '확인'을 누르면 read 처리되어 사라진다.
+class _EmotionAlertBanner extends StatelessWidget {
+  final String classId;
+  const _EmotionAlertBanner({required this.classId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirestoreService.instance.watchTeacherAlerts(classId),
+      builder: (context, snap) {
+        final alerts = snap.data?.docs ?? [];
+        if (alerts.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          children: alerts.map((doc) {
+            final a = doc.data();
+            return Card(
+              color: const Color(0xFFFFF0F0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: const BorderSide(color: Color(0xFFFFB4A9), width: 1.5),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.favorite, color: Colors.redAccent),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            a['message'] ?? '',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if ((a['reason'] ?? '').isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, left: 32),
+                        child: Text('이유: ${a['emoji'] ?? ''} ${a['reason']}'),
+                      ),
+                    if ((a['comment'] ?? '').isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 32),
+                        child: Text('💬 "${a['comment']}"',
+                            style: TextStyle(color: Colors.grey.shade700)),
+                      ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => FirestoreService.instance
+                            .markAlertRead(classId, doc.id),
+                        child: const Text('확인했어요'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
 /// 학생 한 명의 실시간 미션 현황 행 + 개별 알림 버튼
 class _StudentStatusRow extends StatelessWidget {
   final String classId;
@@ -164,6 +236,18 @@ class _StudentStatusRow extends StatelessWidget {
     required this.name,
     required this.missionDay,
   });
+
+  /// 기분 이유 + 코멘트를 한 줄 요약으로 표시
+  Widget? _buildEmotionSubtitle(Map<String, dynamic> status) {
+    final parts = <String>[
+      if ((status['emotionReason'] ?? '').isNotEmpty) status['emotionReason'],
+      if ((status['emotionComment'] ?? '').isNotEmpty)
+        '💬 ${status['emotionComment']}',
+    ];
+    if (parts.isEmpty) return null;
+    return Text(parts.join(' · '),
+        maxLines: 2, overflow: TextOverflow.ellipsis);
+  }
 
   Future<void> _sendReminder(
       BuildContext context, Map<String, dynamic> status) async {
@@ -206,9 +290,7 @@ class _StudentStatusRow extends StatelessWidget {
               style: const TextStyle(fontSize: 30),
             ),
             title: Text(name),
-            subtitle: (status['emotionComment'] ?? '').isEmpty
-                ? null
-                : Text('💬 ${status['emotionComment']}'),
+            subtitle: _buildEmotionSubtitle(status),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
