@@ -5,7 +5,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/models.dart';
-import '../widgets/net_drawing_board.dart';
 
 /// Firestore / Cloud Functions 접근을 한곳에 모은 서비스 레이어
 class FirestoreService {
@@ -70,17 +69,18 @@ class FirestoreService {
   }
 
   // ---------- 학생 미션 제출 ----------
-  /// 수학 답안 제출 → 서버가 채점하고 isCompleted 확정
+  /// 수학 답안 제출 → 서버가 검증하고 isCompleted 확정.
+  /// [wrongProblemIds]는 한 번이라도 틀렸던 문제 목록으로,
+  /// 교사 '개념 분석'의 취약 개념 집계에 사용된다.
   Future<bool> submitMathDay({
     required int day,
     required Map<String, String> answers,
-    required Map<String, List<NetLine>> netLines,
+    required List<String> wrongProblemIds,
   }) async {
     final result = await _functions.httpsCallable('gradeMathDay').call({
       'dayId': dayId(day),
       'answers': answers,
-      'netLines': netLines.map(
-          (k, v) => MapEntry(k, v.map((l) => l.toJson()).toList())),
+      'wrongProblemIds': wrongProblemIds,
     });
     return result.data['isCompleted'] == true;
   }

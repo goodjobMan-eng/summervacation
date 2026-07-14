@@ -274,7 +274,7 @@ exports.gradeMathDay = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { dayId, answers, netLines } = request.data ?? {};
+  const { dayId, answers, wrongProblemIds } = request.data ?? {};
   if (typeof dayId !== "string" || !/^day\d{2}$/.test(dayId)) {
     throw new HttpsError("invalid-argument", "dayId가 올바르지 않습니다.");
   }
@@ -289,26 +289,39 @@ exports.gradeMathDay = onCall(async (request) => {
   if (!bankSnap.exists) throw new HttpsError("not-found", "해당 일차 문제가 없습니다.");
   const problems = bankSnap.data().problems ?? [];
 
-  // ---- 서버 측 채점: 문제별로 채점하고 틀린 문제의 개념 태그를 기록 ----
-  //      (교사 대시보드 '개념 분석'이 wrongTags를 집계해 취약 개념을 보여줌)
-  const wrongTags = [];
-  const wrongProblemIds = [];
+  // ---- 서버 측 최종 검증 ----
+  // 앱은 "한 문제씩 → 정답이어야 다음"이므로 제출 시점의 답은 모두 정답이어야
+  // 한다. 여기서 다시 검증해 우회 제출을 차단한다. (공백 무시, 소수는 수치 비교)
+  const norm = (s) => String(s ?? "").trim().replace(/\s+/g, "");
+  const isCorrect = (given, expected) => {
+    if (given === expected) return true;
+    const g = parseFloat(given);
+    const e = parseFloat(expected);
+    return Number.isFinite(g) && Number.isFinite(e) &&
+      /^[-+]?\d*\.?\d+$/.test(given) && /^[-+]?\d*\.?\d+$/.test(expected) &&
+      Math.abs(g - e) < 1e-9;
+  };
+  let allCorrect = true;
   for (const p of problems) {
-    let correct;
-    if (p.kind === "netDrawing") {
-      correct = linesMatch(netLines?.[p.id] ?? [], p.answerLines ?? []);
-    } else {
-      const given = String(answers?.[p.id] ?? "").trim().replace(/\s+/g, "");
-      correct = given === String(p.answer).trim().replace(/\s+/g, "");
-    }
-    if (!correct) {
-      wrongProblemIds.push(p.id);
-      if (p.tag) wrongTags.push(p.tag);
+    if (!isCorrect(norm(answers?.[p.id]), norm(p.answer))) {
+      allCorrect = false;
+      break;
     }
   }
+
+  // ---- 개념 분석용 기록 ----
+  // wrongProblemIds = 학생이 풀이 과정에서 "한 번이라도 틀렸던" 문제 목록.
+  // 그 문제들의 개념 태그를 쌓아 교사 대시보드가 취약 개념을 집계한다.
+  const validIds = new Set(problems.map((p) => p.id));
+  const firstTryWrong = [...new Set(
+    (Array.isArray(wrongProblemIds) ? wrongProblemIds : [])
+      .filter((id) => validIds.has(id))
+  )];
+  const wrongTags = problems
+    .filter((p) => firstTryWrong.includes(p.id) && p.tag)
+    .map((p) => p.tag);
   const total = problems.length;
-  const correctCount = total - wrongProblemIds.length;
-  const allCorrect = wrongProblemIds.length === 0;
+  const correctCount = total - firstTryWrong.length; // 한 번에 맞힌 문제 수
 
   const progressRef = db.doc(
     `classes/${user.classId}/students/${uid}/mathProgress/${dayId}`
@@ -316,40 +329,19 @@ exports.gradeMathDay = onCall(async (request) => {
   await progressRef.set(
     {
       answers: answers ?? {},
-      userLines: netLines ?? {},
       isCompleted: allCorrect, // Admin SDK는 Rules를 우회 — 서버만 확정 가능
       correctCount,
       total,
-      wrongTags,          // 마지막 제출 기준 취약 개념 태그
-      wrongProblemIds,
+      wrongTags,
+      wrongProblemIds: firstTryWrong,
       attempts: admin.firestore.FieldValue.increment(1),
       gradedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
 
-  return { isCompleted: allCorrect, correctCount, total, wrongProblemIds };
+  return { isCompleted: allCorrect, correctCount, total };
 });
-
-/**
- * 전개도 선 비교 — 방향/순서 무관.
- * 각 선분을 "작은 끝점 우선"으로 정규화한 뒤 집합 동등성 검사.
- * (클라이언트 NetDrawingBoard와 동일한 알고리즘 — 이중 검증)
- */
-function linesMatch(userLines, answerLines) {
-  const normalize = (l) => {
-    const [a, b] =
-      l.x1 < l.x2 || (l.x1 === l.x2 && l.y1 <= l.y2)
-        ? [[l.x1, l.y1], [l.x2, l.y2]]
-        : [[l.x2, l.y2], [l.x1, l.y1]];
-    return `${a[0]},${a[1]}-${b[0]},${b[1]}:${l.type}`;
-  };
-  const userSet = new Set(userLines.map(normalize));
-  const answerSet = new Set(answerLines.map(normalize));
-  if (userSet.size !== answerSet.size) return false;
-  for (const key of answerSet) if (!userSet.has(key)) return false;
-  return true;
-}
 
 // =====================================================================
 // 4) 글쓰기 제출 callable — 서버 타임스탬프로 제출 확정

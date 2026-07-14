@@ -150,6 +150,38 @@ class _DailyStatusTab extends StatefulWidget {
 
 class _DailyStatusTabState extends State<_DailyStatusTab> {
   bool _sending = false;
+  late Future<SchoolClass> _clsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _clsFuture = FirestoreService.instance.getClass(widget.classId);
+  }
+
+  /// 방학 미션 시작일 변경 — 이 날짜가 1일차가 되어
+  /// 매일 자동으로 다음 일차 문제가 열린다.
+  Future<void> _editStartDate(SchoolClass cls) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: cls.missionStartDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 120)),
+      lastDate: DateTime.now().add(const Duration(days: 120)),
+      helpText: '방학 미션 시작일 (이 날이 1일차)',
+    );
+    if (picked == null) return;
+    await FirebaseFirestore.instance.doc('classes/${widget.classId}').update({
+      'missionStartDate': FirestoreService.instance.dateKey(picked),
+    });
+    if (!mounted) return;
+    setState(() {
+      _clsFuture = FirestoreService.instance.getClass(widget.classId);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text(
+              '📅 미션 시작일을 ${FirestoreService.instance.dateKey(picked)}(1일차)로 바꿨어요.')),
+    );
+  }
 
   Future<void> _sendBulkReminders(int missionDay) async {
     setState(() => _sending = true);
@@ -173,7 +205,7 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
   Widget build(BuildContext context) {
     final fs = FirestoreService.instance;
     return FutureBuilder<SchoolClass>(
-      future: fs.getClass(widget.classId),
+      future: _clsFuture,
       builder: (context, classSnap) {
         if (!classSnap.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -197,8 +229,25 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${cls.name} · 미션 ${cls.currentMissionDay}일차',
-                            style: Theme.of(context).textTheme.titleLarge),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                  '${cls.name} · 미션 ${cls.currentMissionDay}일차',
+                                  style:
+                                      Theme.of(context).textTheme.titleLarge),
+                            ),
+                            IconButton(
+                              tooltip: '미션 시작일 바꾸기',
+                              icon: const Icon(Icons.edit_calendar_outlined),
+                              onPressed: () => _editStartDate(cls),
+                            ),
+                          ],
+                        ),
+                        Text(
+                            '시작일: ${FirestoreService.instance.dateKey(cls.missionStartDate)} (1일차)',
+                            style: const TextStyle(
+                                fontSize: 12.5, color: Colors.grey)),
                         const SizedBox(height: 4),
                         StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                           stream: FirebaseFirestore.instance
