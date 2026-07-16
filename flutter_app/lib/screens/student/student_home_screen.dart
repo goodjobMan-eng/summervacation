@@ -129,6 +129,22 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               ),
             ),
             const SizedBox(height: 8),
+            // 자기 점검 체크리스트가 항상 맨 위 — 오늘 할 일부터 확인
+            _MissionTile(
+              icon: Icons.checklist_outlined,
+              title: '자기 점검 체크리스트',
+              subtitle: '오늘의 할 일을 스스로 점검해요',
+              done: _done['selfCheck'] == true,
+              enabled: true,
+              onTap: () => _open(Scaffold(
+                appBar: AppBar(title: const Text('자기 점검')),
+                body: SelfCheckList(
+                  classId: widget.user.classId!,
+                  studentUid: widget.user.uid,
+                  dateKey: fs.dateKey(),
+                ),
+              )),
+            ),
             _MissionTile(
               icon: Icons.calculate_outlined,
               title: '오늘의 수학',
@@ -145,21 +161,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               enabled: day >= 1 && day <= 30,
               onTap: () => _open(WritingScreen(
                   classId: widget.user.classId!, currentDay: day)),
-            ),
-            _MissionTile(
-              icon: Icons.checklist_outlined,
-              title: '자기 점검 체크리스트',
-              subtitle: '오늘의 할 일을 스스로 점검해요',
-              done: _done['selfCheck'] == true,
-              enabled: true,
-              onTap: () => _open(Scaffold(
-                appBar: AppBar(title: const Text('자기 점검')),
-                body: SelfCheckList(
-                  classId: widget.user.classId!,
-                  studentUid: widget.user.uid,
-                  dateKey: fs.dateKey(),
-                ),
-              )),
             ),
             _MissionTile(
               icon: Icons.directions_run,
