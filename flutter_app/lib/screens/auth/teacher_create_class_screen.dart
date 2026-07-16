@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -55,8 +56,21 @@ class _TeacherCreateClassScreenState extends State<TeacherCreateClassScreen> {
         missionStartDate: FirestoreService.instance.dateKey(_startDate),
       );
       setState(() => _result = result);
+    } on FirebaseFunctionsException catch (e) {
+      // 서버 기능이 아직 배포되지 않았거나(not-found/unavailable)
+      // 검증에 실패한 경우 — 원인을 그대로 보여준다.
+      setState(() => _error = e.code == 'not-found' ||
+              e.code == 'unavailable' ||
+              e.code == 'internal'
+          ? '서버 기능이 아직 배포되지 않았습니다.\n'
+              '터미널에서 firebase deploy --only firestore:rules,functions 를 먼저 실행해 주세요.'
+          : '개설 실패: ${e.message ?? e.code}');
+    } on FirebaseAuthException catch (e) {
+      setState(() => _error = e.code == 'operation-not-allowed'
+          ? 'Firebase 콘솔 → Authentication에서 익명(Anonymous) 로그인을 켜 주세요.'
+          : '로그인 실패: ${e.message ?? e.code}');
     } catch (e) {
-      setState(() => _error = '개설에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      setState(() => _error = '개설 실패: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }

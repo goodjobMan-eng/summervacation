@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -40,6 +41,14 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
       await FirestoreService.instance.joinClassWithCode(code, password, name);
       // AuthGate의 watchMe() 스트림이 갱신되면서 자동으로 홈 화면 이동
       if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+    } on FirebaseFunctionsException catch (e) {
+      setState(() => _error = switch (e.code) {
+            'not-found' => '유효하지 않은 참여 코드예요. 다시 확인해 보세요.',
+            'permission-denied' => '비밀번호가 맞지 않아요. 선생님께 다시 확인해 보세요.',
+            'unavailable' || 'internal' =>
+              '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
+            _ => '입장 실패: ${e.message ?? e.code}',
+          });
     } catch (e) {
       setState(() =>
           _error = '들어가지 못했어요. 코드와 비밀번호를 선생님께 다시 확인해 보세요.');
