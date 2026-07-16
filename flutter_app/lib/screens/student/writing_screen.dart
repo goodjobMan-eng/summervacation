@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/models.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/streak_tracker.dart';
+import '../../theme.dart';
 
 /// 30일 주제 글쓰기 — 오늘의 주제 + 작성/제출 + Streak 트래커
 class WritingScreen extends StatefulWidget {
@@ -92,7 +93,7 @@ class _WritingScreenState extends State<WritingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Card(
-                    color: Colors.orange.shade50,
+                    color: AppColors.primarySoft,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(

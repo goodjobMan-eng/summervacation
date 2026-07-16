@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/firestore_service.dart';
+import '../../theme.dart';
 
 const kRegions = [
   '서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종',
@@ -67,7 +68,7 @@ class _TeacherCreateClassScreenState extends State<TeacherCreateClassScreen> {
     if (_result != null) return _buildResult(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('학급 개설하기 🧑‍🏫')),
+      appBar: AppBar(title: const Text('학급 개설')),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
@@ -142,14 +143,14 @@ class _TeacherCreateClassScreenState extends State<TeacherCreateClassScreen> {
     final code = _result!['joinCode'];
     final password = _result!['password'];
     return Scaffold(
-      appBar: AppBar(title: const Text('학급 개설 완료 🎉'), automaticallyImplyLeading: false),
+      appBar: AppBar(title: const Text('학급 개설 완료'), automaticallyImplyLeading: false),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Text('🎊', textAlign: TextAlign.center, style: TextStyle(fontSize: 56)),
+          const Icon(Icons.verified_outlined, size: 52, color: AppColors.primary),
           const SizedBox(height: 8),
           const Text(
-            '학급이 만들어졌어요!\n아래 코드와 비밀번호를 학생들에게 알려 주세요.',
+            '학급이 개설되었습니다.\n아래 코드와 비밀번호를 학생들에게 안내해 주세요.',
             textAlign: TextAlign.center,
             style: TextStyle(height: 1.5),
           ),

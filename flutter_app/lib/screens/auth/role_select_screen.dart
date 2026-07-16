@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme.dart';
 import 'join_class_screen.dart';
 import 'teacher_create_class_screen.dart';
 
@@ -19,20 +20,29 @@ class RoleSelectScreen extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Column(
               children: [
-                const Text('🌞', style: TextStyle(fontSize: 64)),
-                const SizedBox(height: 8),
-                Text('여름방학 숙제 친구',
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(Icons.menu_book_outlined,
+                      size: 34, color: AppColors.primary),
+                ),
+                const SizedBox(height: 16),
+                Text('여름방학 숙제',
                     style: Theme.of(context)
                         .textTheme
-                        .headlineMedium
+                        .headlineSmall
                         ?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
-                const Text('6학년 여름방학을 알차게, 즐겁게!',
-                    style: TextStyle(color: Colors.grey)),
+                const Text('6학년 여름방학 학습·생활 기록 서비스',
+                    style: TextStyle(color: AppColors.inkSoft)),
                 const SizedBox(height: 36),
                 _RoleCard(
-                  emoji: '🧑‍🏫',
-                  title: '선생님이에요',
+                  icon: Icons.co_present_outlined,
+                  title: '선생님으로 시작',
                   subtitle: '우리 반 학급을 개설하고\n참여 코드와 비밀번호를 받아요',
                   onTap: () => Navigator.push(
                     context,
@@ -42,8 +52,8 @@ class RoleSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _RoleCard(
-                  emoji: '🎒',
-                  title: '학생이에요',
+                  icon: Icons.backpack_outlined,
+                  title: '학생으로 시작',
                   subtitle: '선생님께 받은 참여 코드와\n비밀번호로 우리 반에 들어가요',
                   onTap: () => Navigator.push(
                     context,
@@ -61,13 +71,13 @@ class RoleSelectScreen extends StatelessWidget {
 }
 
 class _RoleCard extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
   const _RoleCard({
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.onTap,
@@ -77,13 +87,21 @@ class _RoleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 44)),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 26),
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

@@ -27,7 +27,7 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('지역별 통계 (비식별) 📊')),
+      appBar: AppBar(title: const Text('지역별 통계 (비식별)')),
       body: RefreshIndicator(
         onRefresh: () async => setState(() {
           _future = FirestoreService.instance.fetchRegionStats(days: 7);

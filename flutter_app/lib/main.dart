@@ -52,7 +52,7 @@ class MajiHomeworkApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '여름방학 숙제 친구',
-      theme: buildKidFriendlyTheme(),
+      theme: buildAppTheme(),
       home: const AuthGate(),
     );
   }

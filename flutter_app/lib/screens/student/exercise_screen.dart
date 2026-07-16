@@ -114,7 +114,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🎉 운동 기록 완료! 몸도 마음도 튼튼!')),
+          const SnackBar(content: Text('운동 기록이 저장되었습니다.')),
         );
       }
     } finally {
@@ -132,7 +132,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('오늘의 운동 기록 🏃')),
+      appBar: AppBar(title: const Text('운동 기록')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -214,7 +214,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: _canSubmit && !_busy ? _submit : null,
-                      child: Text(_busy ? '기록 중...' : '기록하기 ✏️'),
+                      child: Text(_busy ? '기록 중...' : '기록하기'),
                     ),
                   ),
                 ],

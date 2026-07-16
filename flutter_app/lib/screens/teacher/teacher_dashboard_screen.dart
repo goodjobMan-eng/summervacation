@@ -8,6 +8,7 @@ import '../../models/models.dart';
 import '../../services/firestore_service.dart';
 import 'achievement_report_screen.dart';
 import 'writing_review_screen.dart';
+import '../../theme.dart';
 
 /// 선생님용 학급 대시보드 (Teacher Portal)
 ///  - 탭 1: 본인 학급 학생들의 당일 4대 미션 현황 + 감정 상태 모니터링
@@ -53,7 +54,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('📚 기본 문제 은행(수학 280문제 + 글쓰기 30주제)을 준비했어요!')),
+            content: Text('기본 문제 은행(수학 280문제, 글쓰기 30주제)을 준비했습니다.')),
       );
     }
   }
@@ -179,7 +180,7 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
           content: Text(
-              '📅 미션 시작일을 ${FirestoreService.instance.dateKey(picked)}(1일차)로 바꿨어요.')),
+              '미션 시작일을 ${FirestoreService.instance.dateKey(picked)}(1일차)로 변경했습니다.')),
     );
   }
 
@@ -192,8 +193,8 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(sent > 0
-                  ? '📣 미완료 학생 $sent명에게 알림을 보냈어요.'
-                  : '🎉 모든 학생이 오늘 미션을 완료했어요!')),
+                  ? '미완료 학생 $sent명에게 알림을 보냈습니다.'
+                  : '모든 학생이 오늘 미션을 완료했습니다.')),
         );
       }
     } finally {
@@ -223,7 +224,7 @@ class _DailyStatusTabState extends State<_DailyStatusTab> {
               children: [
                 _EmotionAlertBanner(classId: widget.classId),
                 Card(
-                  color: Colors.indigo.shade50,
+                  color: AppColors.primarySoft,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -333,10 +334,10 @@ class _EmotionAlertBanner extends StatelessWidget {
           children: alerts.map((doc) {
             final a = doc.data();
             return Card(
-              color: const Color(0xFFFFF0F0),
+              color: AppColors.dangerSoft,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
-                side: const BorderSide(color: Color(0xFFFFB4A9), width: 1.5),
+                side: const BorderSide(color: AppColors.danger, width: 1.5),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -429,7 +430,7 @@ class _StudentStatusRow extends StatelessWidget {
     );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('📣 $name 학생에게 알림을 보냈어요.')),
+        SnackBar(content: Text('$name 학생에게 알림을 보냈습니다.')),
       );
     }
   }
@@ -473,16 +474,16 @@ class _StudentStatusRow extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFDEBE8),
+                              color: AppColors.dangerSoft,
                               borderRadius: BorderRadius.circular(10),
                               border:
-                                  Border.all(color: const Color(0xFFE4574A)),
+                                  Border.all(color: AppColors.danger),
                             ),
-                            child: const Text('💛 관심',
+                            child: const Text('관심 필요',
                                 style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFFE4574A))),
+                                    color: AppColors.danger)),
                           ),
                         ),
                       ),
@@ -505,7 +506,7 @@ class _StudentStatusRow extends StatelessWidget {
                     allDone
                         ? Icons.check_circle
                         : Icons.notifications_active_outlined,
-                    color: allDone ? Colors.green : Colors.deepOrange,
+                    color: allDone ? Colors.green : AppColors.warning,
                   ),
                   onPressed:
                       allDone ? null : () => _sendReminder(context, status),
@@ -599,7 +600,7 @@ class _ConceptStatsTabState extends State<_ConceptStatsTab> {
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    '📊 우리 반 취약 개념 분석\n오답이 많이 나온 개념 순서입니다. 아래로 당기면 새로고침됩니다.',
+                    '우리 반 취약 개념 분석\n오답이 많이 나온 개념 순서입니다. 아래로 당기면 새로고침됩니다.',
                     style: TextStyle(height: 1.5),
                   ),
                 ),
@@ -626,7 +627,7 @@ class _ConceptStatsTabState extends State<_ConceptStatsTab> {
                             ),
                             Text('오답 $wrong회',
                                 style: TextStyle(
-                                    color: Colors.deepOrange.shade400,
+                                    color: AppColors.warning,
                                     fontWeight: FontWeight.w700)),
                           ],
                         ),
@@ -635,8 +636,8 @@ class _ConceptStatsTabState extends State<_ConceptStatsTab> {
                           value: wrong / maxWrong,
                           minHeight: 8,
                           borderRadius: BorderRadius.circular(4),
-                          color: Colors.deepOrange.shade300,
-                          backgroundColor: Colors.orange.shade50,
+                          color: AppColors.warning,
+                          backgroundColor: AppColors.primarySoft,
                         ),
                         const SizedBox(height: 8),
                         Text('어려워한 학생: ${students.join(', ')}',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/firestore_service.dart';
+import '../../theme.dart';
 
 /// 주제 글쓰기 모아보기 (교사용)
 /// 일차를 골라 학급 전체 학생의 글을 한 화면에서 한 번에 확인한다.
@@ -38,7 +39,7 @@ class _WritingReviewScreenState extends State<WritingReviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('글쓰기 모아보기 ✍️'),
+        title: const Text('글쓰기 모아보기'),
         actions: [
           // 일차 선택
           Padding(
@@ -75,7 +76,7 @@ class _WritingReviewScreenState extends State<WritingReviewScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               Card(
-                color: Colors.orange.shade50,
+                color: AppColors.primarySoft,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
@@ -88,8 +89,13 @@ class _WritingReviewScreenState extends State<WritingReviewScreen> {
                 final isSubmitted = r['isSubmitted'] == true;
                 return Card(
                   child: ExpansionTile(
-                    leading: Text(isSubmitted ? '📝' : '⏳',
-                        style: const TextStyle(fontSize: 24)),
+                    leading: Icon(
+                        isSubmitted
+                            ? Icons.description_outlined
+                            : Icons.hourglass_empty,
+                        color: isSubmitted
+                            ? AppColors.primary
+                            : AppColors.inkSoft),
                     title: Text(r['name'],
                         style:
                             const TextStyle(fontWeight: FontWeight.w700)),

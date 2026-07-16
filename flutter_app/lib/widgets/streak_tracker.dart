@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 
 /// 30일 글쓰기 연속 제출(Streak) 트래커
 ///
@@ -35,13 +36,19 @@ class StreakTracker extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Text('🔥', style: TextStyle(fontSize: 28)),
+                const Icon(Icons.local_fire_department,
+                    color: AppColors.warning, size: 24),
                 const SizedBox(width: 8),
-                Text('연속 $_streak일 달성!',
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text('연속 $_streak일 제출',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
                 const Spacer(),
                 Text('${submittedDays.length}/30',
-                    style: Theme.of(context).textTheme.titleMedium),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.inkSoft)),
               ],
             ),
             const SizedBox(height: 12),
@@ -58,13 +65,13 @@ class StreakTracker extends StatelessWidget {
                 return Container(
                   decoration: BoxDecoration(
                     color: done
-                        ? Colors.orange
+                        ? AppColors.primary
                         : (day < currentDay
-                            ? Colors.grey.shade300
-                            : Colors.grey.shade100),
+                            ? AppColors.border
+                            : AppColors.background),
                     borderRadius: BorderRadius.circular(6),
                     border: isToday
-                        ? Border.all(color: Colors.deepOrange, width: 2)
+                        ? Border.all(color: AppColors.ink, width: 1.6)
                         : null,
                   ),
                   alignment: Alignment.center,
@@ -73,7 +80,7 @@ class StreakTracker extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: done ? Colors.white : Colors.grey.shade600,
+                      color: done ? Colors.white : AppColors.inkSoft,
                     ),
                   ),
                 );

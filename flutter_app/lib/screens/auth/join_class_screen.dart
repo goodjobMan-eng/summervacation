@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/firestore_service.dart';
+import '../../theme.dart';
 
 /// 학생용 학급 입장 화면
 /// 선생님께 받은 참여 코드 + 비밀번호를 입력하면
@@ -50,7 +51,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('우리 반 들어가기 🎒')),
+      appBar: AppBar(title: const Text('학급 참여')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),
@@ -58,7 +59,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
             constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               children: [
-                const Text('🏫', style: TextStyle(fontSize: 56)),
+                const Icon(Icons.school_outlined, size: 52, color: AppColors.primary),
                 const SizedBox(height: 8),
                 const Text('선생님께 받은 코드와 비밀번호로 시작해요!',
                     style: TextStyle(color: Colors.grey)),

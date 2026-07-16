@@ -8,6 +8,7 @@ import 'emotion_checkin_screen.dart';
 import 'exercise_screen.dart';
 import 'math_mission_screen.dart';
 import 'writing_screen.dart';
+import '../../theme.dart';
 
 /// 학생 홈 — 오늘의 5대 미션 진입점 + 알림
 ///
@@ -106,20 +107,30 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             Card(
-              color: Colors.indigo.shade50,
+              color: AppColors.primarySoft,
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(
-                  day >= 1
-                      ? '📅 방학 미션 $day일차'
-                      : '방학 미션이 아직 시작되지 않았어요!',
-                  style: Theme.of(context).textTheme.titleLarge,
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_outlined,
+                        size: 20, color: AppColors.primary),
+                    const SizedBox(width: 10),
+                    Text(
+                      day >= 1
+                          ? '방학 미션 $day일차'
+                          : '방학 미션이 아직 시작되지 않았습니다',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
                 ),
               ),
             ),
             const SizedBox(height: 8),
             _MissionTile(
-              emoji: '📐',
+              icon: Icons.calculate_outlined,
               title: '오늘의 수학',
               subtitle: '6학년 1학기 맞춤 학습 (28일)',
               done: _done['math'] == true,
@@ -127,7 +138,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               onTap: () => _open(MathMissionScreen(day: day)),
             ),
             _MissionTile(
-              emoji: '✍️',
+              icon: Icons.edit_note_outlined,
               title: '30일 주제 글쓰기',
               subtitle: '연속 제출에 도전해요!',
               done: _done['writing'] == true,
@@ -136,7 +147,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   classId: widget.user.classId!, currentDay: day)),
             ),
             _MissionTile(
-              emoji: '✅',
+              icon: Icons.checklist_outlined,
               title: '자기 점검 체크리스트',
               subtitle: '오늘의 할 일을 스스로 점검해요',
               done: _done['selfCheck'] == true,
@@ -151,7 +162,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               )),
             ),
             _MissionTile(
-              emoji: '🏃',
+              icon: Icons.directions_run,
               title: '오늘의 운동 기록',
               subtitle: '맨몸 운동, 달리기, 스포츠… 몸을 움직여요!',
               done: _done['exercise'] == true,
@@ -160,7 +171,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   _open(ExerciseScreen(classId: widget.user.classId!)),
             ),
             _MissionTile(
-              emoji: '💛',
+              icon: Icons.favorite_outline,
               title: '오늘 기분 다시 알려주기',
               subtitle: '기분이 바뀌면 언제든지 다시 눌러요',
               done: false,
@@ -176,7 +187,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 }
 
 class _MissionTile extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String title;
   final String subtitle;
   final bool enabled;
@@ -184,7 +195,7 @@ class _MissionTile extends StatelessWidget {
   final VoidCallback onTap;
 
   const _MissionTile({
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.enabled,
@@ -195,22 +206,34 @@ class _MissionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: done ? const Color(0xFFDDF2EC) : null,
       shape: done
           ? RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: const BorderSide(color: Color(0xFF3FA98E)),
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: AppColors.success),
             )
           : null,
       child: ListTile(
         enabled: enabled,
-        leading: Text(emoji, style: const TextStyle(fontSize: 32)),
-        title:
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(done ? '오늘 미션 완료! 🎉' : subtitle),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: done ? AppColors.successSoft : AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon,
+              color: done ? AppColors.success : AppColors.primary),
+        ),
+        title: Text(title,
+            style: const TextStyle(
+                fontWeight: FontWeight.w700, fontSize: 15)),
+        subtitle: Text(done ? '오늘 미션 완료' : subtitle,
+            style: TextStyle(
+                fontSize: 12.5,
+                color: done ? AppColors.success : AppColors.inkSoft)),
         trailing: done
-            ? const Icon(Icons.check_circle, color: Color(0xFF3FA98E))
-            : const Icon(Icons.chevron_right),
+            ? const Icon(Icons.check_circle, color: AppColors.success)
+            : const Icon(Icons.chevron_right, color: AppColors.inkSoft),
         onTap: enabled ? onTap : null,
       ),
     );

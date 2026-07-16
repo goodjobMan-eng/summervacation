@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import '../../services/firestore_service.dart';
+import '../../theme.dart';
 
 /// 오늘의 수학 미션 — 한 문제씩 풀기
 ///
@@ -175,7 +176,7 @@ class _MathMissionScreenState extends State<MathMissionScreen> {
                       style: Theme.of(context)
                           .textTheme
                           .labelLarge
-                          ?.copyWith(color: const Color(0xFFE85C3A))),
+                          ?.copyWith(color: AppColors.primary)),
                   const SizedBox(height: 10),
                   Text(p.question,
                       style: const TextStyle(fontSize: 17, height: 1.6)),
@@ -216,11 +217,11 @@ class _MathMissionScreenState extends State<MathMissionScreen> {
                       margin: const EdgeInsets.only(top: 12),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFDEBE8),
+                        color: AppColors.dangerSoft,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Text(
-                        '🤔 아직 정답이 아니에요. 다시 한번 생각해 볼까요?\n(입력 방법 안내를 다시 확인해 보세요!)',
+                        '아직 정답이 아니에요. 다시 한번 생각해 볼까요?\n입력 방법 안내를 확인해 보세요.',
                         style: TextStyle(height: 1.5),
                       ),
                     ),
@@ -230,11 +231,11 @@ class _MathMissionScreenState extends State<MathMissionScreen> {
                       margin: const EdgeInsets.only(top: 12),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDDF2EC),
+                        color: AppColors.successSoft,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Text(
-                        '⭕ 정답이에요! 참 잘했어요!',
+                        '정답입니다. 잘했어요!',
                         style: TextStyle(
                             fontWeight: FontWeight.w800, height: 1.4),
                       ),
@@ -253,7 +254,7 @@ class _MathMissionScreenState extends State<MathMissionScreen> {
                     onPressed: _submitting ? null : _next,
                     child: Text(_submitting
                         ? '저장 중...'
-                        : (isLast ? '🎉 완료하기' : '다음 문제 →')),
+                        : (isLast ? '완료하기' : '다음 문제')),
                   )
                 : FilledButton.tonal(
                     onPressed: _onCheck,

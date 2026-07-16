@@ -43,7 +43,7 @@ class _AchievementReportScreenState extends State<AchievementReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.className} 달성도 리포트 📋')),
+      appBar: AppBar(title: Text('${widget.className} 달성도 리포트')),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snap) {

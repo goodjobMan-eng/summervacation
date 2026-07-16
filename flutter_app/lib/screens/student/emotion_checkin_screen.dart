@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/firestore_service.dart';
+import '../../theme.dart';
 
 /// 오늘의 기분 데이터: 이모지 + 이름 + 성향(positive/neutral/negative)
 class _Mood {
@@ -111,16 +112,13 @@ class _EmotionCheckInScreenState extends State<EmotionCheckInScreen> {
         _selectedMood == null ? const <String>[] : _reasons[_selectedMood!.valence]!;
 
     return Scaffold(
-      appBar: widget.popOnDone ? AppBar(title: const Text('오늘 기분')) : null,
+      appBar: widget.popOnDone ? AppBar(title: const Text('감정 체크인')) : null,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
             const SizedBox(height: 16),
-            const Text('🌈', textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 8),
-            Text('오늘 기분이 어때요?',
+                        Text('오늘 기분이 어때요?',
                 textAlign: TextAlign.center,
                 style: Theme.of(context)
                     .textTheme
@@ -129,7 +127,7 @@ class _EmotionCheckInScreenState extends State<EmotionCheckInScreen> {
             const SizedBox(height: 8),
             Text('솔직하게 골라도 괜찮아요.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.brown.shade300, height: 1.5)),
+                style: TextStyle(color: AppColors.inkSoft, height: 1.5)),
             const SizedBox(height: 28),
 
             // ---- 1단계: 기분 고르기 ----
@@ -149,12 +147,12 @@ class _EmotionCheckInScreenState extends State<EmotionCheckInScreen> {
                     width: 86,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: selected ? const Color(0xFFFFE0B2) : Colors.white,
+                      color: selected ? AppColors.primarySoft : Colors.white,
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(
                         color: selected
-                            ? const Color(0xFFFF8A65)
-                            : const Color(0xFFFFE4CC),
+                            ? AppColors.primary
+                            : AppColors.border,
                         width: selected ? 3 : 1,
                       ),
                     ),
@@ -217,7 +215,7 @@ class _EmotionCheckInScreenState extends State<EmotionCheckInScreen> {
                     _selectedMood == null || _selectedReason == null || _busy
                         ? null
                         : _submit,
-                child: Text(_busy ? '보내는 중...' : '마음 보내기 💌'),
+                child: Text(_busy ? '보내는 중...' : '보내기'),
               ),
             ),
             const SizedBox(height: 16),
