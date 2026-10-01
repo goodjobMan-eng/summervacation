@@ -8,7 +8,7 @@ namespace Refugee1950
     /// </summary>
     public class TitleMenu : MonoBehaviour
     {
-        public string firstScene = "Ch1_Seoul";
+        public string firstScene = "Ch1_Jangdan";
         public Button continueButton;
 
         void Start()

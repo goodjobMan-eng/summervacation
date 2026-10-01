@@ -3,12 +3,12 @@ using UnityEngine;
 namespace Refugee1950
 {
     /// <summary>
-    /// 마지막 장(영도다리)의 엄마. 핵심 단서를 충분히 모았으면 재회 엔딩, 아니면 스쳐 지나간다.
+    /// 마지막 장(임진강 가, 지금의 임진각)의 엄마. 핵심 단서를 충분히 모았으면 재회 엔딩, 아니면 스쳐 지나간다.
     /// </summary>
     public class ReunionTrigger : Interactable
     {
         [Tooltip("재회에 필요한 핵심 단서 개수")]
-        public int requiredKeyClues = 5;
+        public int requiredKeyClues = 4;
 
         public DialogueData reunionDialogue;
 
