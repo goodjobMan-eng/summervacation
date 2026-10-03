@@ -1504,7 +1504,7 @@ function gCatch(opts={}){
       const t0=performance.now(), dur=1700+Math.random()*500;
       const step=now=>{ if(!alive) return; const p=Math.min(1,(now-t0)/dur); const y=18+p*p*70; el.style.top=y+'%';
         const r=el.getBoundingClientRect(), b=cb.getBoundingClientRect();
-        if(y>70 && r.left+r.width/2>b.left && r.left+r.width/2<b.right && r.bottom>b.top+8){ el.remove(); caught++; countInWave++; sfx('basket'); sayNum(caughtValue(),who); const bi=document.createElement('img'); bi.src=el.src; bi.className='inb2 '+kind; bi.style.left=(10+Math.random()*60)+'%'; cb.appendChild(bi); setTimeout(next,350); return; }
+        if(y>70 && r.left+r.width/2>b.left && r.left+r.width/2<b.right && r.bottom>b.top+8){ el.remove(); caught++; countInWave++; sfx('basket'); const bi=document.createElement('img'); bi.src=el.src; bi.className='inb2 '+kind; bi.style.left=(10+Math.random()*60)+'%'; cb.appendChild(bi); sayNum(caughtValue(),who); setTimeout(next,350); return; }
         if(p>=1){ el.classList.add('miss'); sfx('drop',.5); setTimeout(()=>{ el.remove(); queue.unshift(kind); next(); },500); return; }
         requestAnimationFrame(step); };
       requestAnimationFrame(step);
