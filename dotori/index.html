@@ -594,6 +594,11 @@ button{font-family:"Jua",sans-serif}
 .visual .plus{font-size:1.8rem}
 .player .ytlink{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:6px;font-size:.95rem;text-decoration:none}
 .player .ytlink:active{background:rgba(0,0,0,.8)}
+
+.wbox{position:relative}
+.werase{position:absolute;right:-6px;top:-6px;width:30px;height:30px;border-radius:50%;background:#FFE3DE;border:2px solid #D9603B;color:#C7412E;font-size:.9rem;line-height:1;padding:0;box-shadow:0 2px 0 #C7412E;z-index:2}
+.werase:active{transform:translateY(2px);box-shadow:none}
+.wbox.ok .werase{display:none}
 </style>
 </head>
 <body>
@@ -1796,7 +1801,7 @@ function writePad(host, digits, mode, onAllTraced, opts={}){
   const slots=opts.slots; const wrap=document.createElement('div'); wrap.className='wpad n'+digits.length; if(!slots) host.appendChild(wrap);
   const dpr=Math.min(2,window.devicePixelRatio||1);
   const boxes=[...digits].map((d,i)=>{ const col=document.createElement('div'); col.className='wcol';
-    const b=document.createElement('div'); b.className='wbox'+(slots?' sm':''); const c=document.createElement('canvas'); b.appendChild(c);
+    const b=document.createElement('div'); b.className='wbox'+(slots?' sm':''); const c=document.createElement('canvas'); b.appendChild(c); const er=document.createElement('button'); er.className='werase'; er.type='button'; er.setAttribute('aria-label','지우기'); er.textContent='⌫'; b.appendChild(er);
     if(slots){ slots[i].appendChild(b); } else { col.appendChild(b); if(digits.length===2) col.insertAdjacentHTML('beforeend',`<img class="wlab" src="${A[i===0?'소품_바구니':'소품_도토리']}" alt="">`); wrap.appendChild(col); } return {d:+d, el:b, c, strokes:[], cur:null, done:false, guide:mode==='trace'}; });
   let active=0, locked=false, fails=0;
   const geo=bx=>{ const W=bx.c.width, H=bx.c.height; const s=Math.min(W/100,H/140)*0.8; return {W,H,s,ox:(W-100*s)/2,oy:(H-140*s)/2}; };
@@ -1814,7 +1819,7 @@ function writePad(host, digits, mode, onAllTraced, opts={}){
     g.strokeStyle='#6B3E1C'; g.lineWidth=10*s; g.lineCap='round'; g.lineJoin='round';
     bx.strokes.forEach(st=>{ if(!st.length) return; g.beginPath(); st.forEach((p,i)=>{ const q=P(p); i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]); }); if(st.length===1){ const q=P(st[0]); g.lineTo(q[0]+.1,q[1]); } g.stroke(); }); }
   function refreshActive(){ boxes.forEach((bx,i)=>{ bx.el.classList.toggle('now', mode==='trace'&&!locked&&i===active); bx.el.classList.toggle('ok', bx.done); bx.el.classList.toggle('wait', mode==='trace'&&i>active); }); }
-  boxes.forEach((bx,i)=>{ const c=bx.c; c.style.touchAction='none';
+  boxes.forEach((bx,i)=>{ const c=bx.c; c.style.touchAction='none'; bx.el.querySelector('.werase').addEventListener('click',e=>{ e.stopPropagation(); if(bx.done) return; bx.strokes=[]; bx.cur=null; draw(bx); sfx('click',.4); });
     const toP=e=>{ const r=c.getBoundingClientRect(), {s,ox,oy}=geo(bx); return [((e.clientX-r.left)*dpr-ox)/s, ((e.clientY-r.top)*dpr-oy)/s]; };
     c.addEventListener('pointerdown',e=>{ if(locked||bx.done||(mode==='trace'&&i!==active)) return; e.preventDefault(); c.setPointerCapture(e.pointerId); bx.cur=[toP(e)]; bx.strokes.push(bx.cur); draw(bx); });
     c.addEventListener('pointermove',e=>{ if(!bx.cur) return; bx.cur.push(toP(e)); draw(bx); });
